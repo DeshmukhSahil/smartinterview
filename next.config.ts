@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  
+  serverExternalPackages: ["pdf-parse", "@napi-rs/canvas"],
 };
 
 export default nextConfig;

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Cpu, FileText, Landmark, UserCheck } from "lucide-react";
 
 export default function CreateInterviewPage() {
   const router = useRouter();
@@ -42,20 +43,20 @@ You are an interviewer representing Chirayu Power. Keep these values and facts i
     try {
       setLoading(true);
 
-        const response = await fetch("/api/vapi/generate", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            role,
-            jobDescription,
-            companyKnowledge,
-            aiModel,
-            resume,
-            amount: 5, // let's keep it 5 for testing
-          }),
-        });
+      const response = await fetch("/api/vapi/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          role,
+          jobDescription,
+          companyKnowledge,
+          aiModel,
+          resume,
+          amount: 5,
+        }),
+      });
 
       const data = await response.json();
 
@@ -112,87 +113,122 @@ You are an interviewer representing Chirayu Power. Keep these values and facts i
   };
 
   return (
-    <div className="min-h-screen flex justify-center items-center px-4 py-12">
-      <div className="w-full max-w-3xl bg-[#111827] p-8 rounded-2xl shadow-xl">
-        <h1 className="text-4xl font-bold text-white mb-8 text-center">
-          {isVerifying ? "Verify Questions" : "Create Interview from JD"}
+    <div className="flex justify-center items-center py-6 px-4">
+      <div className="w-full max-w-3xl bg-white p-8 rounded-2xl border border-border-gray shadow-md">
+        <h1 className="text-3xl font-bold text-dark-100 mb-2 text-center">
+          {isVerifying ? "Verify Generated Questions" : "Generate Mock Interview Session"}
         </h1>
+        <p className="text-sm text-soft-gray text-center mb-8">
+          {isVerifying
+            ? "Inspect, refine, or rewrite the generated interview questions before initiation."
+            : "Compile context, job requirements, and candidate records to create a tailored mock interview."}
+        </p>
 
         {!isVerifying ? (
-          <div className="space-y-5">
-            {/* Role */}
-            <input
-              type="text"
-              placeholder="Enter the role (e.g. Frontend Developer)"
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className="w-full p-4 rounded-lg border border-gray-600 bg-gray-900 text-white placeholder-gray-400"
-            />
+          <div className="space-y-6">
+            {/* Role Input */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-semibold text-dark-100 flex items-center gap-2">
+                <UserCheck size={16} className="text-primary-blue" />
+                Target Professional Role
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Solar Design Engineer, Operations Manager"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                className="w-full p-3.5 rounded-xl border border-border-gray bg-white text-dark-100 placeholder-light-400 focus:border-primary-blue focus:ring-2 focus:ring-primary-blue/20 outline-none transition-all"
+              />
+            </div>
 
             {/* AI Model Selection */}
-            <select
-              value={aiModel}
-              onChange={(e) => setAiModel(e.target.value)}
-              className="w-full p-4 rounded-lg border border-gray-600 bg-gray-900 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="gemini-2.5-flash">Cloud (Gemini 2.5 Flash - Recommended)</option>
-              <option value="gemini-3.5-flash">Cloud (Gemini 3.5 Flash)</option>
-              <option value="gemini-2.5-pro">Cloud (Gemini 2.5 Pro)</option>
-              <option value="tinyllama">Local (TinyLlama - Fast/Low RAM)</option>
-              <option value="llama3">Local (Llama 3 - Better/High RAM)</option>
-            </select>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-semibold text-dark-100 flex items-center gap-2">
+                <Cpu size={16} className="text-primary-blue" />
+                Interview AI Engine Model
+              </label>
+              <select
+                value={aiModel}
+                onChange={(e) => setAiModel(e.target.value)}
+                className="w-full p-3.5 rounded-xl border border-border-gray bg-white text-dark-100 focus:border-primary-blue focus:ring-2 focus:ring-primary-blue/20 outline-none transition-all font-medium cursor-pointer"
+              >
+                <option value="gemini-2.5-flash">Cloud (Gemini 2.5 Flash - Recommended)</option>
+                <option value="gemini-3.5-flash">Cloud (Gemini 3.5 Flash)</option>
+                <option value="gemini-2.5-pro">Cloud (Gemini 2.5 Pro)</option>
+                <option value="tinyllama">Local (TinyLlama - Fast/Low RAM)</option>
+                <option value="llama3">Local (Llama 3 - Better/High RAM)</option>
+              </select>
+            </div>
 
             {/* Company Knowledge */}
-            <textarea
-              placeholder="Enter company knowledge and core values..."
-              value={companyKnowledge}
-              onChange={(e) => setCompanyKnowledge(e.target.value)}
-              rows={6}
-              className="w-full p-4 rounded-lg border border-gray-600 bg-gray-900 text-white placeholder-gray-400 resize-y"
-            />
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-semibold text-dark-100 flex items-center gap-2">
+                <Landmark size={16} className="text-primary-blue" />
+                Corporate Context & Guidelines
+              </label>
+              <textarea
+                placeholder="Enter company facts, core values, guidelines..."
+                value={companyKnowledge}
+                onChange={(e) => setCompanyKnowledge(e.target.value)}
+                rows={6}
+                className="w-full p-3.5 rounded-xl border border-border-gray bg-white text-dark-100 placeholder-light-400 focus:border-primary-blue focus:ring-2 focus:ring-primary-blue/20 outline-none transition-all resize-y"
+              />
+            </div>
 
             {/* Job Description */}
-            <textarea
-              placeholder="Paste the full Job Description here..."
-              value={jobDescription}
-              onChange={(e) => setJobDescription(e.target.value)}
-              rows={8}
-              className="w-full p-4 rounded-lg border border-gray-600 bg-gray-900 text-white placeholder-gray-400 resize-y"
-            />
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-semibold text-dark-100 flex items-center gap-2">
+                <FileText size={16} className="text-primary-blue" />
+                Job Description Details
+              </label>
+              <textarea
+                placeholder="Paste structural details, job roles, qualifications..."
+                value={jobDescription}
+                onChange={(e) => setJobDescription(e.target.value)}
+                rows={6}
+                className="w-full p-3.5 rounded-xl border border-border-gray bg-white text-dark-100 placeholder-light-400 focus:border-primary-blue focus:ring-2 focus:ring-primary-blue/20 outline-none transition-all resize-y"
+              />
+            </div>
 
-            {/* Candidate Resume */}
-            <textarea
-              placeholder="Paste Candidate's Resume here..."
-              value={resume}
-              onChange={(e) => setResume(e.target.value)}
-              rows={8}
-              className="w-full p-4 rounded-lg border border-gray-600 bg-gray-900 text-white placeholder-gray-400 resize-y"
-            />
+            {/* Resume Details */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-semibold text-dark-100 flex items-center gap-2">
+                <FileText size={16} className="text-primary-blue" />
+                Candidate Resume Content
+              </label>
+              <textarea
+                placeholder="Paste candidate record details, experience history..."
+                value={resume}
+                onChange={(e) => setResume(e.target.value)}
+                rows={6}
+                className="w-full p-3.5 rounded-xl border border-border-gray bg-white text-dark-100 placeholder-light-400 focus:border-primary-blue focus:ring-2 focus:ring-primary-blue/20 outline-none transition-all resize-y"
+              />
+            </div>
 
-            {/* Button */}
+            {/* Submit Button */}
             <button
               onClick={handleGenerate}
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 text-white font-semibold py-4 rounded-lg transition"
+              className="w-full bg-primary-blue hover:bg-primary-blue/90 disabled:bg-primary-blue/50 text-white font-bold py-4 rounded-xl shadow-sm cursor-pointer transition-all text-sm uppercase tracking-wider"
             >
-              {loading ? "Analyzing Context & Generating..." : "Generate Interview"}
+              {loading ? "Analyzing Context & Synthesizing..." : "Initiate Interview Generation"}
             </button>
           </div>
         ) : (
           <div className="space-y-6">
-            <p className="text-gray-300">
+            <p className="text-sm text-soft-gray bg-gray-50 p-4 rounded-xl border border-border-gray">
               Please review the generated questions. You can edit them directly below.
             </p>
 
-            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+            <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-2">
               {generatedQuestions.map((q, i) => (
-                <div key={i} className="flex gap-3">
-                  <span className="text-gray-400 font-bold mt-2">{i + 1}.</span>
+                <div key={i} className="flex gap-3 items-start">
+                  <span className="text-primary-blue font-bold mt-3 text-sm">{i + 1}.</span>
                   <textarea
                     value={q}
                     onChange={(e) => handleQuestionChange(i, e.target.value)}
                     rows={2}
-                    className="w-full p-3 rounded-lg border border-gray-600 bg-gray-900 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition"
+                    className="w-full p-3 rounded-xl border border-border-gray bg-white text-dark-100 focus:border-primary-blue focus:ring-2 focus:ring-primary-blue/20 outline-none transition-all text-sm"
                   />
                 </div>
               ))}
@@ -201,16 +237,16 @@ You are an interviewer representing Chirayu Power. Keep these values and facts i
             <div className="flex gap-4 pt-4">
               <button
                 onClick={() => setIsVerifying(false)}
-                className="w-1/3 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-4 rounded-lg transition"
+                className="w-1/3 bg-white hover:bg-gray-50 text-soft-gray font-semibold py-3.5 border border-border-gray rounded-xl transition cursor-pointer text-sm"
               >
-                Back
+                Go Back
               </button>
               <button
                 onClick={handleSaveAndStart}
                 disabled={saving}
-                className="w-2/3 bg-green-600 hover:bg-green-700 disabled:bg-green-800 text-white font-semibold py-4 rounded-lg transition"
+                className="w-2/3 bg-success-green hover:bg-success-green/90 disabled:bg-success-green/50 text-white font-bold py-3.5 rounded-xl shadow-sm transition cursor-pointer text-sm uppercase tracking-wider"
               >
-                {saving ? "Saving..." : "Save & Start Interview"}
+                {saving ? "Saving Data..." : "Confirm & Launch Interview"}
               </button>
             </div>
           </div>

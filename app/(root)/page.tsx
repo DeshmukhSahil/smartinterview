@@ -1,114 +1,137 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import InterviewCard from "@/components/InterviewCard";
-import { getCurrentUser } from "@/lib/actions/auth.action";
-import {
-  getInterviewsByUserId,
-  getLatestInterviews,
-} from "@/lib/actions/general.action";
+import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { Clock, Wallet, AlertTriangle, ClipboardCheck, ArrowRight, Loader2 } from "lucide-react";
 
-import { SparklesPreview } from "@/components/SparklesPreview";
-import { GoogleGeminiEffectDemo } from "@/components/GoogleGeminiEffectDemo";
+export default function Home() {
+  const [candidateName, setCandidateName] = useState("Candidate");
+  const [candidateEmail, setCandidateEmail] = useState("");
+  const [interviews, setInterviews] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-async function Home() {
-  const user = await getCurrentUser();
+  useEffect(() => {
+    const email = localStorage.getItem("candidate_email") || "";
+    const name = localStorage.getItem("candidate_name") || "Candidate";
+    setCandidateName(name);
+    setCandidateEmail(email);
 
-  const [userInterviews, allInterview] = await Promise.all([
-    getInterviewsByUserId(user?.id!),
-    getLatestInterviews({ userId: user?.id! }),
-  ]);
+    const fetchInterviews = async () => {
+      try {
+        if (!isSupabaseConfigured) {
+          // Fallback mock interview for local development
+          setInterviews([
+            {
+              id: "1",
+              role: "Solar Design Engineer",
+              type: "Technical",
+              techstack: ["PVsyst", "AutoCAD", "SketchUp"],
+              createdAt: new Date(Date.now() - 3600000).toISOString(),
+            },
+            {
+              id: "2",
+              role: "Operations & Maintenance Head",
+              type: "Behavioral",
+              techstack: ["O&M Management", "Grid Safety", "SCADA"],
+              createdAt: new Date(Date.now() - 86400000).toISOString(),
+            }
+          ]);
+          setLoading(false);
+          return;
+        }
 
-  const sortedUserInterviews = userInterviews?.sort((a, b) =>
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
-  const sortedAllInterviews = allInterview?.sort((a, b) =>
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+        if (email) {
+          const { data, error } = await supabase
+            .from("interviews")
+            .select("*")
+            .eq("candidate_email", email.trim().toLowerCase())
+            .order("created_at", { ascending: false });
 
-  const limitedUserInterviews = sortedUserInterviews?.slice(0, 6);
-  const limitedAllInterviews = sortedAllInterviews?.slice(0, 6);
+          console.log("Supabase fetch returned:", { data, error });
 
-  const hasPastInterviews = limitedUserInterviews?.length! > 0;
-  const hasUpcomingInterviews = limitedAllInterviews?.length! > 0;
+          if (error) {
+            console.error("Error fetching candidate interviews:", error);
+          } else if (data) {
+            setInterviews(data.map((doc: any) => ({
+              id: doc.id,
+              role: doc.role,
+              type: doc.type,
+              techstack: doc.techstack,
+              createdAt: doc.created_at,
+            })));
+          }
+        }
+
+      } catch (err) {
+        console.error("Failed to load dashboard data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInterviews();
+  }, []);
+
+  const hasInterviews = interviews.length > 0;
 
   return (
-    <>
-    <div className="w-full flex items-center justify-center px-6 py-4 shadow-sm">
-      <Link href="/" className="flex items-center gap-2">
-        <SparklesPreview />
-      </Link>
-    </div>
-
-
-    <main className="px-4 md:px-12 py-10 max-w-screen-xl mx-auto space-y-20">
-      <section >
-        <div >
-          <GoogleGeminiEffectDemo/>
+    <div className="space-y-10">
+      {/* Welcome & Action Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-dark-100">
+            Welcome back, {candidateName}
+          </h1>
+          <p className="text-sm text-soft-gray mt-1">
+            Access your assigned assessments, view evaluations, and prepare for your interview.
+          </p>
         </div>
-      </section> 
-
-      {/* Your Interviews */}
-      <section className="mt-10">
-        <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">
-          Your Interviews
-        </h2>
-        {hasPastInterviews ? (
-          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
-            {limitedUserInterviews?.map((interview) => (
-              <InterviewCard
-              key={interview.id}
-              userId={user?.id}
-              interviewId={interview.id}
-              role={interview.role}
-              type={interview.type}
-              techstack={interview.techstack}
-              createdAt={interview.createdAt}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center text-gray-500 dark:text-gray-400 mt-8">
-            You haven't taken any interviews yet.
-          </div>
-        )}
-      </section>
-
-      {/* Upcoming Interviews */}
-      <section>
-        <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">
-          Take Interviews
-        </h2>
-        {hasUpcomingInterviews ? (
-          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
-            {limitedAllInterviews?.map((interview) => (
-              <InterviewCard
-              key={interview.id}
-              userId={user?.id}
-              interviewId={interview.id}
-              role={interview.role}
-              type={interview.type}
-              techstack={interview.techstack}
-              createdAt={interview.createdAt}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center text-gray-500 dark:text-gray-400 mt-8">
-            There are no interviews available at the moment.
-          </div>
-        )}
-      </section>
-
-      {/* View All Interviews Button */}
-      <div className="flex justify-center">
-        <Button asChild className="bg-blue-800 hover:bg-blue-500 text-white px-6 py-3 text-lg rounded-xl shadow-md">
-          <Link href="/allinterviews">View All Interviews</Link>
-        </Button>
       </div>
-    </main>
-        </>
+
+      {/* Your Interviews Section */}
+      <section className="space-y-6">
+        <h2 className="text-2xl font-semibold tracking-tight text-dark-100 border-b border-border-gray pb-3">
+          Your Assigned Interviews
+        </h2>
+        {loading ? (
+          <div className="flex justify-center items-center py-20">
+            <Loader2 className="animate-spin text-primary-blue h-8 w-8" />
+          </div>
+        ) : hasInterviews ? (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {interviews.map((interview) => (
+              <InterviewCard
+                key={interview.id}
+                userId="candidate-user"
+                interviewId={interview.id}
+                role={interview.role}
+                type={interview.type}
+                techstack={interview.techstack}
+                createdAt={interview.createdAt}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center bg-white border border-border-gray p-10 rounded-2xl text-soft-gray shadow-sm font-medium">
+            You don't have any interviews assigned to your email ({candidateEmail}) yet.
+          </div>
+        )}
+      </section>
+
+      {/* View All Interviews Navigation Button */}
+      {hasInterviews && !loading && (
+        <div className="flex justify-center pt-4">
+          <Button asChild className="btn-secondary gap-2">
+            <Link href="/allinterviews">
+              <span>View All Interviews</span>
+              <ArrowRight size={16} />
+            </Link>
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }
-
-export default Home;

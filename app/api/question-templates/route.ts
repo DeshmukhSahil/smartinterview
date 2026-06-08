@@ -1,0 +1,44 @@
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: corsHeaders });
+}
+
+export async function GET() {
+  try {
+    const { data, error } = await supabase
+      .from("question_templates")
+      .select("id, category_name, questions")
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    return Response.json({ success: true, data }, { status: 200, headers: corsHeaders });
+  } catch (error: any) {
+    return Response.json({ success: false, error: error.message }, { status: 500, headers: corsHeaders });
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const { data, error } = await supabase
+      .from("question_templates")
+      .insert([body])
+      .select();
+
+    if (error) throw error;
+    return Response.json({ success: true, data }, { status: 200, headers: corsHeaders });
+  } catch (error: any) {
+    return Response.json({ success: false, error: error.message }, { status: 500, headers: corsHeaders });
+  }
+}

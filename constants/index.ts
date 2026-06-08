@@ -169,17 +169,17 @@ export const feedbackSchema = z.object({
       comment: z.string(),
     }),
     z.object({
-      name: z.literal("Problem-Solving"),
+      name: z.union([z.literal("Problem-Solving"), z.literal("Problem Solving")]),
       score: z.number(),
       comment: z.string(),
     }),
     z.object({
-      name: z.literal("Cultural Fit"),
+      name: z.union([z.literal("Cultural Fit"), z.literal("Cultural & Role Fit")]),
       score: z.number(),
       comment: z.string(),
     }),
     z.object({
-      name: z.literal("Confidence and Clarity"),
+      name: z.union([z.literal("Confidence and Clarity"), z.literal("Confidence & Clarity")]),
       score: z.number(),
       comment: z.string(),
     }),

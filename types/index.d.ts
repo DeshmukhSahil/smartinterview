@@ -27,6 +27,7 @@ interface Interview {
   company_knowledge?: string;
   ai_model?: string;
   resume?: string;
+  system_prompt?: string;
 }
 
 interface CreateFeedbackParams {
