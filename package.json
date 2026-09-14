@@ -2,10 +2,12 @@
   "name": "interview-platform",
   "version": "0.1.0",
   "private": true,
+  "main": "server.js",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
-    "start": "next start",
+    "start": "node server.js",
+    "postinstall": "next build",
     "lint": "next lint"
   },
   "dependencies": {
