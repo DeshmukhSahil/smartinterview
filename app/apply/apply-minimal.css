@@ -1,0 +1,21 @@
+/* Refined application typography; the animation and clickable grid stay intact. */
+.hiring-page.solar-hiring{--ink:#192943;--font-solar-display:var(--font-inter);--font-solar-mono:var(--font-inter);font-family:var(--font-inter),Arial,sans-serif;color:#344258}
+.hiring-page.solar-hiring .opportunities-heading h1{display:block;background:transparent;border:0;box-shadow:none;padding:0;margin:0;color:#172640;font-family:var(--font-inter),Arial,sans-serif;font-size:clamp(28px,2.4vw,36px);font-weight:650;line-height:1.25;letter-spacing:-.035em;text-shadow:none}
+.hiring-page.solar-hiring .opportunities-heading>span{font:500 11px var(--font-inter),Arial,sans-serif;letter-spacing:.02em;color:#56647b;background:#ffffffeb;border:1px solid #dce2eb;border-radius:5px;padding:8px 12px}
+.hiring-page.solar-hiring .hiring-role h2,.hiring-page.solar-hiring .hiring-panel h2{color:#192943;font-family:var(--font-inter),Arial,sans-serif;font-weight:600;letter-spacing:-.025em;line-height:1.35}
+.hiring-page.solar-hiring .hiring-role h2{font-size:20px}.hiring-page.solar-hiring .hiring-panel h2{font-size:26px}
+.hiring-page.solar-hiring .hiring-description,.hiring-page.solar-hiring .hiring-role p,.hiring-page.solar-hiring .hiring-role .solar-role-location,.hiring-page.solar-hiring .hiring-consent{color:#56647b;line-height:1.65}
+.hiring-page.solar-hiring .hiring-eyebrow{font-family:var(--font-inter),Arial,sans-serif;color:#68758a!important;font-weight:600!important;letter-spacing:.09em!important}
+.hiring-page.solar-hiring .hiring-fields label{color:#344258;font-weight:600;font-size:12px}.hiring-page.solar-hiring .field-hint{color:#68758a;font-weight:400}
+.hiring-page.solar-hiring .hiring-fields input,.hiring-page.solar-hiring .hiring-fields textarea,.hiring-page.solar-hiring .hiring-fields select,.hiring-page.solar-hiring .searchable-select-trigger{font-family:var(--font-inter),Arial,sans-serif;color:#26364e;font-size:13px}
+.hiring-page.solar-hiring .hiring-fields input::placeholder,.hiring-page.solar-hiring .hiring-fields textarea::placeholder{color:#8691a3;opacity:1}
+.hiring-page.solar-hiring .hiring-steps{font-family:var(--font-inter),Arial,sans-serif}.hiring-page.solar-hiring .hiring-steps span{font-weight:500;color:#69768b}.hiring-page.solar-hiring .hiring-steps .current{color:#2b3a8f;font-weight:600}
+.hiring-page.solar-hiring .solar-role-action{font-family:var(--font-inter),Arial,sans-serif;font-size:12px;font-weight:600;letter-spacing:0}.hiring-page.solar-hiring .hiring-role:only-child .solar-role-action{background:#fff8df;border-color:#ecdba5;color:#665321;border-radius:4px}
+.hiring-page.solar-hiring .hiring-tag{font-family:var(--font-inter),Arial,sans-serif;font-size:10px;font-weight:500;letter-spacing:.03em;background:#f3f5f9;color:#647188;border-radius:4px}
+.hiring-page.solar-hiring .hiring-role,.hiring-page.solar-hiring .hiring-panel{box-shadow:0 3px 14px #17264008}.hiring-page.solar-hiring .hiring-role.selected{background:#f7f9ff;box-shadow:0 3px 14px #17264008;border-color:#aab6dc}
+.hiring-page.solar-hiring .hiring-footer{font-family:var(--font-inter),Arial,sans-serif;font-size:10px;letter-spacing:.03em;color:#647188}.hiring-page.solar-hiring>.apply-animation-toggle{font-family:var(--font-inter),Arial,sans-serif}
+
+.hiring-page.solar-hiring{background-color:#fff}
+.hiring-page.solar-hiring *{border-radius:0!important}
+.hiring-page.solar-hiring .hiring-role,.hiring-page.solar-hiring .hiring-role.selected,.hiring-page.solar-hiring .hiring-role:hover,.hiring-page.solar-hiring .hiring-panel{box-shadow:none}
+

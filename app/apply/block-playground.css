@@ -1,0 +1,16 @@
+.hiring-page.solar-hiring{--block-size:48px;position:relative;isolation:isolate;background-color:#f7f8fc;background-image:linear-gradient(#2b3a8f12 1px,transparent 1px),linear-gradient(90deg,#2b3a8f12 1px,transparent 1px);background-size:var(--block-size) var(--block-size);padding-bottom:48px}
+.solar-hiring>.block-playground{position:absolute;inset:0;pointer-events:none}
+.block-surface{position:absolute;inset:0;overflow:hidden;pointer-events:auto;touch-action:pan-y;cursor:crosshair}
+.solar-hiring>:not(.block-playground){position:relative;z-index:1;pointer-events:none}
+.solar-hiring .hiring-steps,.solar-hiring .hiring-role,.solar-hiring .hiring-panel,.solar-hiring .hiring-error,.solar-hiring .opportunities-heading>*,.solar-hiring .hiring-footer{pointer-events:auto}
+.solar-hiring .opportunities-heading{padding-top:42px}
+.solar-hiring .opportunities-heading h1{font-size:30px;letter-spacing:-.05em;margin:0;font-weight:600;color:var(--ink);background:#f7f8fced;width:fit-content}
+.placed-block,.block-cursor{position:absolute;width:var(--block-size);height:var(--block-size);pointer-events:none}
+.placed-block{border:1px solid #344d642e;box-shadow:inset 4px 4px 0 #ffffff40,inset -4px -4px 0 #233c501c;animation:block-place .18s ease-out}
+.placed-block::after{content:"";position:absolute;inset:8px;border:1px solid #ffffff30}
+.block-cursor{display:none;border:2px dashed #2b3a8f}
+.block-surface:focus-visible .block-cursor{display:block}
+.grid-help{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+@keyframes block-place{from{opacity:.3;scale:.85}to{opacity:1;scale:1}}
+@media(max-width:760px){.hiring-page.solar-hiring{--block-size:32px;padding-bottom:32px}.solar-hiring .opportunities-heading{padding-top:28px}}
+@media(prefers-reduced-motion:reduce){.placed-block{animation:none}}

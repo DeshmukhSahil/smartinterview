@@ -1,6 +1,6 @@
 import { Toaster } from "sonner";
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Montserrat } from "next/font/google";
 
 import "./globals.css";
 
@@ -9,12 +9,18 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
+const montserrat = Montserrat({
+  variable: "--font-montserrat",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
+});
+
 export const metadata: Metadata = {
-  title: "Chirayu Power Pvt. Ltd. - Interview Preparation Module",
+  title: "Chirayu Power Pvt. Ltd. - Careers & Interview Portal",
   icons: {
     icon: '/logo1.svg',
   },
-  description: "Mock interview preparation module for Chirayu Power - Energy with Integrity.",
+  description: "Careers and interview preparation platform for Chirayu Power - Energy with Integrity.",
 };
 
 export default function RootLayout({
@@ -27,10 +33,11 @@ export default function RootLayout({
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1" />
       </head>
-      <body className={`${inter.className} antialiased bg-background text-foreground`}>
+      <body className={`${inter.variable} ${montserrat.variable} ${montserrat.className} antialiased bg-background text-foreground`}>
         {children}
         <Toaster />
       </body>
     </html>
   );
 }
+
