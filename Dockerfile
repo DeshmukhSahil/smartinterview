@@ -1,6 +1,18 @@
 FROM node:22-slim
 WORKDIR /app
 COPY . .
+
+# Only genuinely public (client-exposed) values are needed at build time,
+# since Next.js bakes NEXT_PUBLIC_* into the client bundle. Server-only
+# secrets are injected at container runtime via --env-file instead, so
+# they never end up baked into image layers.
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ARG NEXT_BASE_PATH=""
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+ENV NEXT_BASE_PATH=$NEXT_BASE_PATH
+
 RUN npm install
 ENV NODE_ENV=production
 EXPOSE 3000
