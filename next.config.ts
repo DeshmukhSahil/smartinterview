@@ -7,6 +7,11 @@ const basePath = process.env.NEXT_BASE_PATH || "";
 
 const nextConfig: NextConfig = {
   basePath,
+  // Mirrors basePath into the client bundle so hardcoded fetch() calls
+  // (which, unlike <Link>/router, aren't auto-prefixed by basePath) can prepend it.
+  env: {
+    NEXT_PUBLIC_BASE_PATH: basePath,
+  },
   eslint: {
     ignoreDuringBuilds: true,
   },

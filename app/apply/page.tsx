@@ -9,6 +9,8 @@ import BlockPlayground from "./BlockPlayground";
 import "./block-playground.css";
 import "./apply-minimal.css";
 
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 type PublicCampaign = Pick<Campaign, "role" | "locations" | "description" | "min_years" | "max_years" | "fields"> & { id: string };
 type Assessment = { fit: string; reason: string; evidence: string[]; gaps: string[] };
 
@@ -210,7 +212,7 @@ export default function HiringApplication() {
   const c = campaigns.find(c => c.id === selected);
 
   useEffect(() => {
-    fetch("/api/hiring", { cache: "no-store" }).then(async r => {
+    fetch(`${BASE_PATH}/api/hiring`, { cache: "no-store" }).then(async r => {
       const body = await r.json(); if (!r.ok) throw new Error(body.error);
       setCampaigns(body.campaigns);
     }).catch(e => setError(e.message)).finally(() => setLoading(false));
@@ -360,7 +362,7 @@ export default function HiringApplication() {
       const body = new FormData();
       body.append("candidate", JSON.stringify({ ...candidate, years: Number(candidate.years), campaign_id: c.id, answers }));
       body.append("resume", file);
-      const r = await fetch("/api/hiring/screen", { method: "POST", body });
+      const r = await fetch(`${BASE_PATH}/api/hiring/screen`, { method: "POST", body });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error);
       setAssessment(data.assessment);
@@ -382,7 +384,7 @@ export default function HiringApplication() {
     setBusy(true);
     setError("");
     try {
-      const r = await fetch("/api/hiring/submit", {
+      const r = await fetch(`${BASE_PATH}/api/hiring/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token }),

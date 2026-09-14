@@ -43,7 +43,7 @@ You are an interviewer representing Chirayu Power. Keep these values and facts i
     try {
       setLoading(true);
 
-      const response = await fetch("/api/vapi/generate", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/vapi/generate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -84,7 +84,7 @@ You are an interviewer representing Chirayu Power. Keep these values and facts i
   const handleSaveAndStart = async () => {
     try {
       setSaving(true);
-      const response = await fetch("/api/interview/save", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/interview/save`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

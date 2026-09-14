@@ -648,7 +648,7 @@ STRICT RULES YOU MUST FOLLOW:
 8. When you've covered enough topics, naturally wrap up: "I think we've covered a lot of ground today. Is there anything else you'd like to add before we close?".
 9. Mirror the candidate's energy — if they're detailed, appreciate it; if they're brief, probe gently.`;
 
-      const response = await fetch("/api/chat/local", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/chat/local`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
