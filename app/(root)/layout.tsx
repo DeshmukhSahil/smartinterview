@@ -41,7 +41,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-4 animate-pulse">
-          <ChirayuLogo size={48} />
+          <ChirayuLogo height={52} />
           <div className="flex items-center gap-2 mt-4">
             <span className="size-2 bg-primary-blue rounded-full animate-bounce [animation-delay:-0.3s]" />
             <span className="size-2 bg-solar-yellow rounded-full animate-bounce [animation-delay:-0.15s]" />
@@ -66,7 +66,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
         {/* Logo Section */}
         <div className="mb-10 px-2">
           <Link href="/">
-            <ChirayuLogo />
+            <ChirayuLogo height={42} />
           </Link>
         </div>
 
@@ -102,7 +102,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
       <div className="md:hidden w-full flex flex-col min-h-screen">
         <header className="w-full flex items-center justify-between px-4 py-3 bg-white border-b border-border-gray z-40">
           <Link href="/">
-            <ChirayuLogo size={28} />
+            <ChirayuLogo height={32} />
           </Link>
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
@@ -121,7 +121,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="mb-10 px-2 flex justify-between items-center">
-                <ChirayuLogo size={28} />
+                <ChirayuLogo height={32} />
                 <button
                   onClick={() => setMobileOpen(false)}
                   className="p-1 text-soft-gray hover:text-dark-100 focus:outline-none"

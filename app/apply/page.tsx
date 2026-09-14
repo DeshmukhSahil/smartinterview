@@ -54,15 +54,17 @@ function SearchableSelect({
         }
       }
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    if (open) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
   }, [open, onBlur]);
 
   useEffect(() => {
     if (open) {
       setSearch("");
       setHighlightedIndex(0);
-      setTimeout(() => searchInputRef.current?.focus(), 50);
+      setTimeout(() => searchInputRef.current?.focus(), 60);
     }
   }, [open]);
 
@@ -92,15 +94,19 @@ function SearchableSelect({
       if (filteredOptions[highlightedIndex]) {
         handleSelect(filteredOptions[highlightedIndex]);
       }
-    } else if (e.key === "Escape") {
-      e.preventDefault();
+    } else if (e.key === "Escape" || e.key === "Tab") {
       setOpen(false);
       onBlur?.();
     }
   };
 
   return (
-    <div className="searchable-select" ref={containerRef} onKeyDown={handleKeyDown}>
+    <div
+      className={`searchable-select ${open ? "is-open" : ""}`}
+      ref={containerRef}
+      onKeyDown={handleKeyDown}
+      onClick={e => e.stopPropagation()}
+    >
       <button
         id={id}
         type="button"
@@ -108,64 +114,80 @@ function SearchableSelect({
         aria-haspopup="listbox"
         aria-expanded={open}
         className={`searchable-select-trigger ${!value ? "is-placeholder" : ""} ${open ? "is-open" : ""} ${className}`}
-        onClick={() => setOpen(prev => !prev)}
+        onClick={e => {
+          e.preventDefault();
+          e.stopPropagation();
+          setOpen(prev => !prev);
+        }}
       >
         <span>{value || placeholder}</span>
         <span className={`searchable-select-arrow ${open ? "open" : ""}`}>▼</span>
       </button>
 
-      {open && (
-        <div className="searchable-select-dropdown" role="listbox">
-          <div className="searchable-select-search-wrap">
-            <span className="searchable-select-search-icon">🔍</span>
-            <input
-              ref={searchInputRef}
-              type="text"
-              className="searchable-select-search-input"
-              placeholder={`Search in ${options.length} options...`}
-              value={search}
-              onChange={e => {
-                setSearch(e.target.value);
-                setHighlightedIndex(0);
+      <div
+        className={`searchable-select-dropdown ${open ? "is-open" : ""}`}
+        role="listbox"
+        aria-hidden={!open}
+      >
+        <div className="searchable-select-search-wrap" onClick={e => e.stopPropagation()}>
+          <input
+            ref={searchInputRef}
+            type="text"
+            className="searchable-select-search-input"
+            placeholder={`Search in ${options.length} options...`}
+            value={search}
+            tabIndex={open ? 0 : -1}
+            onChange={e => {
+              setSearch(e.target.value);
+              setHighlightedIndex(0);
+            }}
+            onClick={e => e.stopPropagation()}
+          />
+          {search && (
+            <button
+              type="button"
+              className="searchable-select-clear-btn"
+              aria-label="Clear search"
+              tabIndex={open ? 0 : -1}
+              onClick={e => {
+                e.stopPropagation();
+                setSearch("");
+                searchInputRef.current?.focus();
               }}
-              onClick={e => e.stopPropagation()}
-            />
-            {search && (
-              <button
-                type="button"
-                style={{ background: "none", border: "none", color: "#888", cursor: "pointer", fontSize: "14px", padding: "0 4px" }}
-                onClick={() => setSearch("")}
-              >
-                ✕
-              </button>
-            )}
-          </div>
-
-          <ul className="searchable-select-options">
-            {filteredOptions.length === 0 ? (
-              <li className="searchable-select-no-results">No matches found for &ldquo;{search}&rdquo;</li>
-            ) : (
-              filteredOptions.map((opt, idx) => {
-                const isSelected = opt === value;
-                const isHighlighted = idx === highlightedIndex;
-                return (
-                  <li
-                    key={opt}
-                    role="option"
-                    aria-selected={isSelected}
-                    className={`searchable-select-option ${isSelected ? "selected" : ""} ${isHighlighted ? "highlighted" : ""}`}
-                    onClick={() => handleSelect(opt)}
-                    onMouseEnter={() => setHighlightedIndex(idx)}
-                  >
-                    <span>{opt}</span>
-                    {isSelected && <span style={{ color: "#07549b", fontWeight: "bold" }}>✓</span>}
-                  </li>
-                );
-              })
-            )}
-          </ul>
+            >
+              ✕
+            </button>
+          )}
         </div>
-      )}
+
+        <ul className="searchable-select-options">
+          {filteredOptions.length === 0 ? (
+            <li className="searchable-select-no-results">No matches found for &ldquo;{search}&rdquo;</li>
+          ) : (
+            filteredOptions.map((opt, idx) => {
+              const isSelected = opt === value;
+              const isHighlighted = idx === highlightedIndex;
+              return (
+                <li
+                  key={opt}
+                  role="option"
+                  aria-selected={isSelected}
+                  className={`searchable-select-option ${isSelected ? "selected" : ""} ${isHighlighted ? "highlighted" : ""}`}
+                  onClick={e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleSelect(opt);
+                  }}
+                  onMouseEnter={() => setHighlightedIndex(idx)}
+                >
+                  <span>{opt}</span>
+                  {isSelected && <span style={{ color: "#07549b", fontWeight: "bold" }}>✓</span>}
+                </li>
+              );
+            })
+          )}
+        </ul>
+      </div>
     </div>
   );
 }

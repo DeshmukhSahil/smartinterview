@@ -95,7 +95,7 @@ export default function LoginPage() {
 
         {/* Logo and title */}
         <div className="flex flex-col items-center text-center space-y-4">
-          <ChirayuLogo size={42} />
+          <ChirayuLogo height={50} />
           <div>
             <h2 className="text-xl font-bold tracking-tight text-dark-100">
               Candidate Mock Portal

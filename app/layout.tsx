@@ -18,7 +18,12 @@ const montserrat = Montserrat({
 export const metadata: Metadata = {
   title: "Chirayu Power Pvt. Ltd. - Careers & Interview Portal",
   icons: {
-    icon: '/logo1.svg',
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/favicon.png", type: "image/png" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/favicon.png",
   },
   description: "Careers and interview preparation platform for Chirayu Power - Energy with Integrity.",
 };
