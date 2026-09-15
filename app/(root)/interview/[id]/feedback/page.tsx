@@ -124,7 +124,7 @@ export default function FeedbackPage() {
           Evaluation Report: <span className="capitalize text-primary-blue">{interview.role}</span>
         </h1>
         <p className="text-sm text-soft-gray">
-          Completed mock assessment performance analytics and evaluation details.
+          Completed assessment performance analytics and evaluation details.
         </p>
       </div>
 
@@ -263,7 +263,7 @@ export default function FeedbackPage() {
       {/* Retake & Action Buttons Panel */}
       <div className="bg-white border border-border-gray rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="text-xs text-soft-gray font-medium text-center sm:text-left leading-relaxed">
-          Need to retry? You can relaunch this specific mock structure or return to the dashboard.
+          Need to retry? You can relaunch this specific interview structure or return to the dashboard.
         </div>
         <div className="flex gap-3 w-full sm:w-auto shrink-0">
           <Button asChild className="btn-secondary !h-10 text-xs gap-1.5 flex-1 sm:flex-none">
@@ -275,7 +275,7 @@ export default function FeedbackPage() {
           <Button asChild className="btn-primary !h-10 text-xs gap-1.5 flex-1 sm:flex-none">
             <Link href={`/interview/${id}`}>
               <RotateCcw size={14} />
-              <span>Retake Mock</span>
+              <span>Retake Interview</span>
             </Link>
           </Button>
         </div>

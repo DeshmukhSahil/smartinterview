@@ -91,7 +91,7 @@ export default function FilterableInterviewList({ interviews }: Props) {
         </div>
       ) : (
         <div className="text-center bg-white border border-border-gray p-12 rounded-2xl text-soft-gray shadow-sm font-semibold">
-          No mock interviews match the selected search filters.
+          No interviews match the selected search filters.
         </div>
       )}
     </div>

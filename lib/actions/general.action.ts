@@ -39,7 +39,7 @@ export async function createFeedback(params: CreateFeedbackParams) {
       model: modelProvider as any, 
       schema: feedbackSchema,
       prompt: `
-        You are an AI interviewer analyzing a mock interview. Your task is to evaluate the candidate based on structured categories. Be thorough and detailed in your analysis. Don't be lenient with the candidate. If there are mistakes or areas for improvement, point them out.Change the questions everytime
+        You are an AI interviewer analyzing a candidate interview. Your task is to evaluate the candidate based on structured categories. Be thorough and detailed in your analysis. Don't be lenient with the candidate. If there are mistakes or areas for improvement, point them out.Change the questions everytime
         Transcript:
         ${formattedTranscript}
     
@@ -51,7 +51,7 @@ export async function createFeedback(params: CreateFeedbackParams) {
         - **Confidence and Clarity**: Confidence in responses, engagement, and clarity.
         `,
       system:
-        "You are a professional interviewer analyzing a mock interview. Your task is to evaluate the candidate based on structured categories",
+        "You are a professional interviewer analyzing a candidate interview. Your task is to evaluate the candidate based on structured categories",
     });
 
     const feedback = {

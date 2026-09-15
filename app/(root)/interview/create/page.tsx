@@ -116,12 +116,12 @@ You are an interviewer representing Chirayu Power. Keep these values and facts i
     <div className="flex justify-center items-center py-6 px-4">
       <div className="w-full max-w-3xl bg-white p-8 rounded-2xl border border-border-gray shadow-md">
         <h1 className="text-3xl font-bold text-dark-100 mb-2 text-center">
-          {isVerifying ? "Verify Generated Questions" : "Generate Mock Interview Session"}
+          {isVerifying ? "Verify Generated Questions" : "Generate Interview Session"}
         </h1>
         <p className="text-sm text-soft-gray text-center mb-8">
           {isVerifying
             ? "Inspect, refine, or rewrite the generated interview questions before initiation."
-            : "Compile context, job requirements, and candidate records to create a tailored mock interview."}
+            : "Compile context, job requirements, and candidate records to create a tailored interview."}
         </p>
 
         {!isVerifying ? (

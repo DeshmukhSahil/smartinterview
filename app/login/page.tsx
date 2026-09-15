@@ -98,10 +98,10 @@ export default function LoginPage() {
           <ChirayuLogo height={50} />
           <div>
             <h2 className="text-xl font-bold tracking-tight text-dark-100">
-              Candidate Mock Portal
+              Candidate Assessment
             </h2>
             <p className="text-xs text-soft-gray mt-1 max-w-[260px] mx-auto">
-              Log in with the Access Password ID sent by your HR administrator to access your assigned mock interviews.
+              Log in with the Access Password ID sent by your HR administrator to access your assigned interviews.
             </p>
           </div>
         </div>

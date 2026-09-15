@@ -114,7 +114,7 @@ const InterviewCard = ({
         {/* Assessment Summary */}
         <p className="text-center text-soft-gray text-xs leading-relaxed italic px-2 line-clamp-3">
           {loading ? "Loading assessment details..." : (feedback?.finalAssessment ||
-            "Mock session pending. Initiate this assessment module to evaluate and analyze candidate knowledge.")}
+            "Session pending. Initiate this assessment module to evaluate and analyze candidate knowledge.")}
         </p>
 
         {/* Tech Stack Footer & CTA Button */}
@@ -135,7 +135,7 @@ const InterviewCard = ({
                     : `/interview/${interviewId}`
                 }
               >
-                {feedback ? "Check Feedback" : "Start Mock"}
+                {feedback ? "Check Feedback" : "Start Interview"}
               </Link>
             </Button>
           )}

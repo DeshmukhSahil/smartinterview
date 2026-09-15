@@ -70,9 +70,9 @@ export default function AllInterviewsPage() {
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-dark-100">All Mock Sessions</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-dark-100">All Interview Sessions</h1>
         <p className="text-sm text-soft-gray mt-1">
-          Explore and filter all generated mock interview sheets available in your candidate portal.
+          Explore and filter all generated interview sheets available in your candidate portal.
         </p>
       </div>
 
