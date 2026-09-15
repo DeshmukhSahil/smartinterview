@@ -11,9 +11,13 @@ export const erp = () => createClient(env("ERP_SUPABASE_URL"), env("ERP_SUPABASE
 export const interviewDb = () => createClient(env("NEXT_PUBLIC_SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), { auth: { persistSession: false } });
 export const hash = (s: string) => createHash("sha256").update(s).digest("hex");
 export const newToken = () => randomBytes(32).toString("hex");
+// ERP_ORIGIN is the deployed ERP's exact origin. The ERP's Vite dev server always
+// runs on a fixed port (vite.config.ts `server.port: 8080`), so it's allowed
+// alongside ERP_ORIGIN so admins can test the hiring campaign panel locally.
+const ALLOWED_ORIGINS = [process.env.ERP_ORIGIN, "http://localhost:8080"].filter(Boolean);
 export function cors(request: Request): Record<string, string> {
   const origin = request.headers.get("origin");
-  return origin && origin === process.env.ERP_ORIGIN
+  return origin && ALLOWED_ORIGINS.includes(origin)
     ? { "Access-Control-Allow-Origin": origin, "Access-Control-Allow-Headers": "Authorization, Content-Type, ngrok-skip-browser-warning", "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Vary": "Origin" } : {};
 }
 export async function requireHR(request: Request, action: "view" | "edit") {
