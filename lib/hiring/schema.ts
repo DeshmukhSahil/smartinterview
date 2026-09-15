@@ -10,6 +10,7 @@ export const fieldSchema = z.object({
 export const campaignSchema = z.object({
   id: z.string().uuid().optional(),
   role: z.string().trim().min(2).max(150),
+  interview_mode: z.enum(["ai_assisted", "one_on_one"]).default("ai_assisted"),
   active: z.boolean(),
   locations: z.array(z.string().trim().min(1).max(100)).max(100),
   description: z.string().trim().min(1).max(5000),
@@ -43,6 +44,23 @@ export const resultSchema = z.object({
   evidence: z.array(z.string().max(500)).max(8),
   gaps: z.array(z.string().max(500)).max(8),
 });
+// "unknown" is the common case in practice: a single-microphone live capture from the HR
+// side can't reliably diarize who said what, so most captured chunks are tagged unknown
+// rather than falsely attributed to either speaker.
+export const transcriptTurnSchema = z.object({
+  role: z.enum(["hr", "candidate", "unknown"]),
+  content: z.string().min(1).max(4000),
+});
+export const notesSchema = z.object({
+  summary: z.string().min(1).max(2000),
+  keyPoints: z.array(z.string().max(300)).max(10),
+  strengths: z.array(z.string().max(300)).max(8),
+  concerns: z.array(z.string().max(300)).max(8),
+  followUps: z.array(z.string().max(300)).max(8),
+  recommendation: z.enum(["strong_yes", "yes", "needs_review", "no"]),
+});
+export type InterviewNotes = z.infer<typeof notesSchema>;
+export type TranscriptTurn = z.infer<typeof transcriptTurnSchema>;
 export function validateAnswers(c: Campaign, a: z.infer<typeof applicantSchema>) {
   if (!c.locations.includes(a.location)) throw new Error("Choose an available location for this role");
   if (Object.keys(a.answers).some(id => !c.fields.some(f => f.id === id))) throw new Error("Form changed. Reload and try again");

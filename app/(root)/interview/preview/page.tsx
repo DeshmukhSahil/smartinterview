@@ -37,22 +37,7 @@ export default function PreviewPage() {
     );
   }
 
-  return (
-    <div className="p-4 bg-white rounded-2xl border border-gray-100 shadow-inner h-full flex flex-col justify-between">
-      <div className="flex items-center justify-between border-b pb-2 mb-3">
-        <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
-          <span className="size-1.5 bg-green-500 rounded-full animate-ping" />
-          Live Playground Session
-        </span>
-        <button
-          onClick={() => setPreviewData(null)}
-          className="text-[10px] font-bold text-red-500 hover:underline cursor-pointer"
-        >
-          Reset Session
-        </button>
-      </div>
-
-      <div className="flex-1 min-h-[450px]">
+  return <><button onClick={() => setPreviewData(null)} className="fixed bottom-2 right-3 z-50 rounded bg-white/90 px-2 py-1 text-[9px] text-gray-500">Reset preview</button>
         <Agent
           userName="HR Tester"
           userId="hr-tester-user"
@@ -66,7 +51,5 @@ export default function PreviewPage() {
           role={previewData.role || "Software Engineer"}
           systemPrompt={previewData.system_prompt || ""}
         />
-      </div>
-    </div>
-  );
+  </>;
 }

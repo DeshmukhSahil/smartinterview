@@ -28,6 +28,28 @@ interface Interview {
   ai_model?: string;
   resume?: string;
   system_prompt?: string;
+  mode?: "ai_assisted" | "one_on_one";
+  interview_status?: "pending_schedule" | "scheduled" | "completed" | "no_show" | "cancelled";
+  scheduled_at?: string | null;
+  scheduled_by?: string | null;
+  teams_join_url?: string | null;
+  teams_meeting_id?: string | null;
+  teams_event_id?: string | null;
+  live_transcript?: { role: "hr" | "candidate" | "unknown"; content: string }[];
+  ai_notes?: InterviewNotesShape | null;
+  hr_notes?: InterviewNotesShape | null;
+  notes_submitted_at?: string | null;
+  notes_submitted_by?: string | null;
+  notes_email_sent_at?: string | null;
+}
+
+interface InterviewNotesShape {
+  summary: string;
+  keyPoints: string[];
+  strengths: string[];
+  concerns: string[];
+  followUps: string[];
+  recommendation: "strong_yes" | "yes" | "needs_review" | "no";
 }
 
 interface CreateFeedbackParams {
@@ -50,6 +72,9 @@ interface InterviewCardProps {
   type: string;
   techstack: string[];
   createdAt?: string;
+  mode?: "ai_assisted" | "one_on_one";
+  interviewStatus?: "pending_schedule" | "scheduled" | "completed" | "no_show" | "cancelled";
+  scheduledAt?: string | null;
 }
 
 interface AgentProps {

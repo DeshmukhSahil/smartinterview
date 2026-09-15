@@ -1,153 +1,158 @@
 "use client";
-
-import React, { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { User, Shield, Mail, Layers, Eye, CheckCircle, LogOut } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import { Check, LogOut, UserRound } from "lucide-react";
+import s from "@/components/CandidateDashboard.module.css";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const [profileDetails, setProfileDetails] = useState({
-    name: "Candidate",
-    email: "candidate@chirayupower.com",
-    role: "Assigned Candidate Taker",
-    department: "Recruitment & Talent Acquisition",
-    username: "@candidate",
-    passwordId: "CP-XXXXXX",
-    status: "Active",
+  const [identity, setIdentity] = useState({ name: "", email: "" });
+  const [form, setForm] = useState({
+    phone: "",
+    location: "",
+    availability: "",
   });
-
+  const [message, setMessage] = useState("");
   useEffect(() => {
-    const email = localStorage.getItem("candidate_email") || "candidate@chirayupower.com";
-    const name = localStorage.getItem("candidate_name") || "Candidate";
-    const passwordId = localStorage.getItem("password_id") || "CP-XXXXXX";
-
-    // Deduce standard usernames / display info
-    const username = email ? `@${email.split("@")[0]}` : "@candidate";
-
-    setProfileDetails({
-      name,
-      email,
-      role: "Candidate Assessment Taker",
-      department: "Human Resources / O&M Integration",
-      username,
-      passwordId,
-      status: "Active",
-    });
+    const email = (localStorage.getItem("candidate_email") || "")
+      .trim()
+      .toLowerCase();
+    setIdentity({ name: localStorage.getItem("candidate_name") || "", email });
+    try {
+      const saved = JSON.parse(
+        localStorage.getItem(`chirayu_profile:${email}`) || "{}",
+      );
+      setForm({
+        phone: typeof saved.phone === "string" ? saved.phone : "",
+        location: typeof saved.location === "string" ? saved.location : "",
+        availability:
+          typeof saved.availability === "string" ? saved.availability : "",
+      });
+    } catch {
+      /* Empty preferences remain editable. */
+    }
   }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem("candidate_email");
-    localStorage.removeItem("password_id");
-    localStorage.removeItem("candidate_name");
-    toast.success("Successfully logged out from candidate portal.");
-    router.push("/login");
+  const save = (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const clean = Object.fromEntries(
+        Object.entries(form).map(([key, value]) => [key, value.trim()]),
+      );
+      localStorage.setItem(
+        `chirayu_profile:${identity.email}`,
+        JSON.stringify(clean),
+      );
+      setForm(clean as typeof form);
+      setMessage("Preferences saved in this browser.");
+    } catch {
+      setMessage(
+        "Your browser couldn’t save these preferences. Please check its storage settings.",
+      );
+    }
   };
-
+  const logout = () => {
+    ["candidate_email", "candidate_name", "password_id"].forEach((k) =>
+      localStorage.removeItem(k),
+    );
+    router.replace("/login");
+  };
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-8 text-dark-100 animate-fadeIn">
-      {/* Page Heading */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-dark-100">User Profile</h1>
-        <p className="text-sm text-soft-gray mt-1">
-          Manage and review your candidate access credentials and assigned role context.
-        </p>
+    <div className={s.dashboard} style={{ maxWidth: 1000 }}>
+      <div className={s.heading}>
+        <div>
+          <p className={s.eyebrow}>YOUR DETAILS</p>
+          <h1>
+            Your profile<span>.</span>
+          </h1>
+          <p>
+            Review your invitation identity and keep your preferences ready.
+          </p>
+        </div>
       </div>
-
-      {/* Main Profile Grid */}
-      <div className="grid gap-6 md:grid-cols-3">
-        {/* Profile Card Summary Banner */}
-        <div className="bg-white border border-border-gray p-6 rounded-2xl shadow-sm md:col-span-1 flex flex-col items-center text-center justify-center space-y-4">
-          <div className="size-24 rounded-full bg-primary-blue/5 border border-primary-blue/10 flex items-center justify-center">
-            <User size={48} className="text-primary-blue" />
+      <div className={s.columns}>
+        <section className={s.panel}>
+          <div className={s.panelHeader}>
+            <h2>Contact & preferences</h2>
+            <UserRound size={20} />
           </div>
-          <div>
-            <h2 className="text-lg font-bold text-dark-100">{profileDetails.name}</h2>
-            <p className="text-xs text-soft-gray font-semibold mt-1 uppercase tracking-wider">
-              {profileDetails.role}
+          <form onSubmit={save} className="space-y-5">
+            <div className="grid sm:grid-cols-2 gap-5">
+              {[
+                { label: "Full name", value: identity.name },
+                { label: "Invitation email", value: identity.email },
+              ].map((field) => (
+                <div key={field.label}>
+                  <span className="block text-xs text-slate-500 mb-2">
+                    {field.label}
+                  </span>
+                  <p className="text-sm font-medium break-all">
+                    {field.value || "Not provided"}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Your recruitment team manages invitation details. The preferences
+              below are stored only in this browser and are not sent to HR.
             </p>
-          </div>
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-50 text-success-green border border-success-green/20 text-xs font-bold uppercase tracking-wider">
-            <span className="size-1.5 rounded-full bg-success-green animate-pulse" />
-            {profileDetails.status}
-          </div>
-        </div>
-
-        {/* Detailed Grid Parameters */}
-        <div className="bg-white border border-border-gray p-6 rounded-2xl shadow-sm md:col-span-2 space-y-6">
-          <h3 className="text-base font-bold text-dark-100 pb-3 border-b border-border-gray flex items-center gap-2">
-            <Shield size={18} className="text-primary-blue" />
-            Identity Specifications
-          </h3>
-
-          <div className="grid gap-6 sm:grid-cols-2">
-            {/* Field: Full Name */}
-            <div className="space-y-1 pl-1">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-soft-gray block">Full Name</span>
-              <div className="text-sm font-semibold text-dark-100 flex items-center gap-2 mt-1">
-                <User size={16} className="text-soft-gray" />
-                {profileDetails.name}
-              </div>
-            </div>
-
-            {/* Field: Corporate Role */}
-            <div className="space-y-1 pl-1">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-soft-gray block">Designation</span>
-              <div className="text-sm font-semibold text-dark-100 flex items-center gap-2 mt-1">
-                <Layers size={16} className="text-soft-gray" />
-                {profileDetails.role}
-              </div>
-            </div>
-
-            {/* Field: Email Address */}
-            <div className="space-y-1 pl-1">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-soft-gray block">Candidate Email</span>
-              <div className="text-sm font-semibold text-dark-100 flex items-center gap-2 mt-1">
-                <Mail size={16} className="text-soft-gray" />
-                {profileDetails.email}
-              </div>
-            </div>
-
-            {/* Field: Department */}
-            <div className="space-y-1 pl-1">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-soft-gray block">Department</span>
-              <div className="text-sm font-semibold text-dark-100 flex items-center gap-2 mt-1">
-                <Layers size={16} className="text-soft-gray" />
-                {profileDetails.department}
-              </div>
-            </div>
-
-            {/* Field: Username */}
-            <div className="space-y-1 pl-1">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-soft-gray block">Username</span>
-              <div className="text-sm font-semibold text-dark-100 flex items-center gap-2 mt-1">
-                <Eye size={16} className="text-soft-gray" />
-                {profileDetails.username}
-              </div>
-            </div>
-
-            {/* Field: Access Code */}
-            <div className="space-y-1 pl-1">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-soft-gray block">Access Code</span>
-              <div className="text-sm font-bold text-green-700 flex items-center gap-2 mt-1 font-mono uppercase">
-                <Shield size={16} className="text-success-green" />
-                {profileDetails.passwordId}
-              </div>
-            </div>
-          </div>
-
-          {/* Action Row - Log out */}
-          <div className="pt-6 border-t border-border-gray flex justify-end">
-            <Button
-              onClick={handleLogout}
-              className="bg-red-50 hover:bg-red-100/80 border border-red-200 text-red-600 font-bold px-5 py-2.5 h-10 rounded-xl text-xs uppercase tracking-wide gap-1.5 cursor-pointer"
-            >
-              <LogOut size={14} />
-              Disconnect Session
-            </Button>
-          </div>
-        </div>
+            {(
+              [
+                {
+                  key: "phone",
+                  label: "Phone number",
+                  placeholder: "Include your country code",
+                },
+                {
+                  key: "location",
+                  label: "Preferred work location",
+                  placeholder: "City or location preference",
+                },
+                {
+                  key: "availability",
+                  label: "Interview availability",
+                  placeholder: "Days, time window and timezone",
+                },
+              ] as const
+            ).map((field) => (
+              <label
+                className="block text-xs font-medium text-slate-700"
+                key={field.key}
+              >
+                {field.label}
+                <input
+                  type={field.key === "phone" ? "tel" : "text"}
+                  maxLength={field.key === "availability" ? 300 : 100}
+                  value={form[field.key]}
+                  onChange={(e) => {
+                    setForm({ ...form, [field.key]: e.target.value });
+                    setMessage("");
+                  }}
+                  placeholder={field.placeholder}
+                  className="block mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-200"
+                />
+              </label>
+            ))}
+            <button className={s.primary} type="submit">
+              Save preferences <Check size={16} />
+            </button>
+            <p role="status" className="text-xs text-slate-600">
+              {message}
+            </p>
+          </form>
+        </section>
+        <aside className={s.rail}>
+          <section className={`${s.panel} ${s.prepare}`}>
+            <h2>Your candidate access</h2>
+            <p>
+              Your invitation connects you to both AI and one-on-one interviews.
+              Use the dashboard to find your next conversation and saved
+              assessments.
+            </p>
+            <button className={s.secondary} onClick={logout}>
+              <LogOut size={15} /> Sign out
+            </button>
+          </section>
+        </aside>
       </div>
     </div>
   );

@@ -20,7 +20,7 @@ export function ChirayuLogo({
   return (
     <div className={`inline-flex items-center justify-center select-none ${className}`}>
       <img
-        src="/assets/chirayu-logo.png"
+        src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/assets/chirayu-logo.png`}
         alt={alt}
         className="object-contain block max-w-full"
         style={{

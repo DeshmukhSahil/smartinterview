@@ -1,0 +1,335 @@
+.shell {
+  display: flex;
+  min-height: 100dvh;
+  background: #f7f9fb;
+  color: #263440;
+  font-family: var(--font-inter), Arial, sans-serif;
+}
+.sidebar {
+  width: 228px;
+  flex-shrink: 0;
+  background: #fff;
+  border-right: 1px solid #e9edf1;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  padding: 30px 19px 20px;
+}
+.logo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 5px 32px;
+}
+.logo > button {
+  display: none;
+}
+.sectionLabel {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  color: #9ba6b0;
+  margin: 4px 12px 18px;
+}
+.sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sidebar nav a {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 7px;
+  color: #72808f;
+  font-size: 12px;
+  transition: background 0.15s;
+}
+.sidebar nav a:hover {
+  background: #f7f9fb;
+}
+.sidebar nav a[aria-current="page"] {
+  background: #edf4fc;
+  color: #195b9a;
+  font-weight: 500;
+}
+.sidebar nav svg {
+  stroke-width: 1.6;
+}
+.sideNote {
+  margin: auto 10px 26px;
+  padding-top: 40px;
+  color: #8e9aa4;
+}
+.sideNote svg {
+  color: #7891a6;
+}
+.sideNote strong {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: #637786;
+  margin: 12px 0 8px;
+  line-height: 1.7;
+}
+.sideNote p {
+  font-size: 10px;
+  line-height: 1.8;
+}
+.sidebar footer {
+  border-top: 1px solid #edf0f4;
+  padding: 19px 8px 0;
+  color: #a0aab2;
+  font-size: 9px;
+}
+.workspace {
+  flex: 1;
+  min-width: 0;
+}
+.navbar {
+  height: 68px;
+  background: white;
+  border-bottom: 1px solid #e9edf1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 30px;
+  position: relative;
+  z-index: 25;
+}
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 11px;
+  color: #a0aab4;
+}
+.breadcrumb strong {
+  font-weight: 500;
+  color: #60717e;
+}
+.profile {
+  margin-left: auto;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 33px;
+  height: 33px;
+  border-radius: 50%;
+  background: #f0f4f8;
+  color: #52728c;
+  font-size: 11px;
+}
+.profile strong {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+}
+.profile div > span {
+  display: block;
+  color: #9ba6b0;
+  font-size: 9px;
+  margin-top: 2px;
+}
+.menu,
+.mobileLogo {
+  display: none;
+}
+.content {
+  --portal-nav-height: 68px;
+  padding: 34px;
+  min-height: calc(100dvh - 68px);
+}
+.interview {
+  padding: 0;
+  container-type: inline-size;
+  container-name: portal;
+}
+.scrim {
+  display: none;
+}
+.shell a:focus-visible,
+.shell button:focus-visible {
+  outline: 2px solid #2c6ba3;
+  outline-offset: 4px;
+}
+.interview [data-room-header] {
+  height: 55px;
+  padding: 0 30px;
+}
+.interview [data-room-header] > a {
+  display: none;
+}
+.interview [data-room-header] > div:first-of-type {
+  border: 0;
+  padding-left: 0;
+  font-size: 12px;
+}
+.interview [data-interview-room]:fullscreen [data-room-header] > a {
+  display: flex;
+}
+@media (max-width: 1000px) and (min-width: 761px) {
+  .sidebar {
+    width: 195px;
+    padding-left: 13px;
+    padding-right: 13px;
+  }
+  .navbar {
+    padding: 0 22px;
+  }
+  .content {
+    padding: 24px;
+  }
+  .interview {
+    padding: 0;
+  }
+}
+@media (max-width: 760px) {
+  .sidebar {
+    display: none;
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 240px;
+    z-index: 60;
+  }
+  .sidebar.open {
+    display: flex;
+  }
+  .logo > button {
+    display: flex;
+  }
+  .scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: #1d2a3d55;
+    z-index: 59;
+  }
+  .menu {
+    display: flex;
+    color: #52677a;
+  }
+  .mobileLogo {
+    display: block;
+  }
+  .breadcrumb {
+    display: none;
+  }
+  .navbar {
+    height: 62px;
+    padding: 0 18px;
+    gap: 14px;
+  }
+  .profile > div {
+    display: none;
+  }
+  .content {
+    --portal-nav-height: 62px;
+    padding: 22px 18px;
+  }
+  .interview {
+    padding: 0;
+  }
+  .interview [data-room-header] {
+    height: 48px;
+    padding: 0 20px;
+  }
+  .interview [data-room-header] > div:first-of-type {
+    display: block;
+    max-width: 55%;
+    font-size: 10px;
+  }
+}
+
+/* The same project panorama connects the navigation and dashboard. */
+.brandStory {
+  margin-top: auto;
+  margin-bottom: 22px;
+  padding-top: 36px;
+  display: block;
+  color: #084d91;
+}
+.brandPhoto {
+  height: clamp(110px, 22vh, 230px);
+  background: #eaf1f7 url("/brand/solar-sidebar.webp") center/cover;
+  border-radius: 10px 10px 0 0;
+}
+.brandStory > div:last-child {
+  background: #f0f6fc;
+  padding: 16px 13px;
+  border-radius: 0 0 10px 10px;
+}
+.brandStory span {
+  display: block;
+  font-size: 8px;
+  line-height: 1.6;
+  letter-spacing: 1.3px;
+  color: #536d86;
+}
+.brandStory strong {
+  display: block;
+  font-size: 17px;
+  letter-spacing: -0.5px;
+  margin: 8px 0;
+}
+.brandStory p {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  font-size: 10px;
+}
+.brandStory:hover p {
+  text-decoration: underline;
+}
+.sidebar {
+  overflow-y: auto;
+}
+.sectionLabel {
+  color: #687c90;
+}
+.sidebar nav a {
+  color: #526679;
+  font-size: 13px;
+}
+.breadcrumb {
+  color: #65778a;
+}
+.profile div > span {
+  color: #65778a;
+}
+.content {
+  padding: 28px 32px;
+}
+.interview {
+  padding: 0;
+}
+@media (max-width: 760px) {
+  .content {
+    padding: 22px 16px;
+  }
+  .interview {
+    padding: 0;
+  }
+  .brandPhoto {
+    height: 145px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shell *,
+  .shell *::before,
+  .shell *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -26,3 +26,6 @@ Thumbs.db
 # Firebase & misc
 firebase-debug.log
 functions/lib/
+
+# Local browser verification output
+/test-results/

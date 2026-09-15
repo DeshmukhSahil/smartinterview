@@ -3,12 +3,16 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Key, Mail, ShieldAlert, Check } from "lucide-react";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { ArrowRight, Mic, Clock3 } from "lucide-react";
+import styles from "@/components/InterviewRoom.module.css";
 import { ChirayuLogo } from "@/components/ui/chirayu-logo";
+import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+
+function invitationDestination() {
+  const path = sessionStorage.getItem("interview_return_path");
+  sessionStorage.removeItem("interview_return_path");
+  return path && /^\/interview\/[^/]+$/.test(path) ? path : "/";
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -21,7 +25,7 @@ export default function LoginPage() {
     const storedEmail = localStorage.getItem("candidate_email");
     const storedPass = localStorage.getItem("password_id");
     if (storedEmail && storedPass) {
-      router.replace("/");
+      router.replace(invitationDestination());
     }
   }, [router]);
 
@@ -43,7 +47,7 @@ export default function LoginPage() {
           localStorage.setItem("password_id", "CP-MOCK");
           localStorage.setItem("candidate_name", "Sahil Deshmukh (Mock)");
           toast.success("Logged in with local mock credentials!");
-          router.push("/");
+          router.push(invitationDestination());
           return;
         }
         toast.error("Database unconfigured. Use email 'candidate@mock.com' and access code 'CP-MOCK' to sign in locally.");
@@ -78,7 +82,7 @@ export default function LoginPage() {
       localStorage.setItem("candidate_name", candidate.candidate_name || "Candidate");
 
       toast.success(`Welcome back, ${candidate.candidate_name || "Candidate"}!`);
-      router.push("/");
+      router.push(invitationDestination());
     } catch (err) {
       console.error(err);
       toast.error("An error occurred during authentication.");
@@ -87,88 +91,9 @@ export default function LoginPage() {
     }
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50/50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl border border-border-gray shadow-sm relative overflow-hidden">
-        {/* Brand accent bar */}
-        <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-primary-blue via-solar-yellow to-success-green" />
-
-        {/* Logo and title */}
-        <div className="flex flex-col items-center text-center space-y-4">
-          <ChirayuLogo height={50} />
-          <div>
-            <h2 className="text-xl font-bold tracking-tight text-dark-100">
-              Candidate Assessment
-            </h2>
-            <p className="text-xs text-soft-gray mt-1 max-w-[260px] mx-auto">
-              Log in with the Access Password ID sent by your HR administrator to access your assigned interviews.
-            </p>
-          </div>
-        </div>
-
-        {/* Login form */}
-        <form className="mt-8 space-y-6" onSubmit={handleLogin}>
-          <div className="space-y-4">
-            {/* Email input */}
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="email" className="text-xs font-semibold text-soft-gray flex items-center gap-1.5">
-                <Mail size={14} className="text-primary-blue" />
-                Candidate Email
-              </Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                placeholder="e.g. candidate@gmail.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="h-10 rounded-xl text-xs"
-              />
-            </div>
-
-            {/* Access Code Input */}
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="passwordId" className="text-xs font-semibold text-soft-gray flex items-center gap-1.5">
-                <Key size={14} className="text-primary-blue" />
-                Access Password ID
-              </Label>
-              <Input
-                id="passwordId"
-                name="passwordId"
-                type="text"
-                required
-                placeholder="e.g. CP-XXXXXX"
-                value={passwordId}
-                onChange={(e) => setPasswordId(e.target.value)}
-                className="h-10 rounded-xl text-xs font-mono uppercase"
-              />
-            </div>
-          </div>
-
-          <div>
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-primary-blue hover:bg-primary-blue/90 text-white font-bold h-10 rounded-xl text-xs uppercase tracking-wider gap-2 cursor-pointer"
-            >
-              {loading ? "Authenticating..." : (
-                <>
-                  <Check size={16} />
-                  Access Portal
-                </>
-              )}
-            </Button>
-          </div>
-        </form>
-
-        {/* Footer info/help */}
-        <div className="text-[10px] text-center text-soft-gray border-t border-border-gray pt-4 mt-6">
-          <p>Don't have credentials? Contact your HR manager for your Access Code.</p>
-          <p className="mt-1">© 2026 Chirayu Power Pvt. Ltd. All rights reserved.</p>
-        </div>
-      </div>
-    </div>
-  );
+  return <div className={styles.room}>
+    <header className={styles.header}><a href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/`} className={styles.brand}><ChirayuLogo height={38}/></a><span className={styles.headerStatus}>Your invitation to what’s next</span></header>
+    <main className={styles.loginMain}><section className={styles.welcome}><p className={styles.eyebrow}>Good people. Meaningful work.</p><h1>Your next chapter<br />starts with<br /><em>a conversation.</em></h1><p className={styles.intro}>We’re glad you’re here. Join your interview with Chirayu Power and tell us about the work that matters to you.</p><div className={styles.loginNotes}><p><Mic size={16}/>A natural conversation, in your own words.</p><p><Clock3 size={16}/>Time to think. Space to be yourself.</p></div></section>
+    <section className={styles.loginForm}><p className={styles.eyebrow}>Your interview invitation</p><h2>Welcome to Chirayu.</h2><p>Use the email address and access code from your invitation to continue.</p><form onSubmit={handleLogin}><label htmlFor="email">Email address<input id="email" name="email" type="email" autoComplete="email" required placeholder="you@example.com" value={email} onChange={e=>setEmail(e.target.value)}/></label><label htmlFor="passwordId">Invitation access code<input id="passwordId" name="passwordId" autoComplete="one-time-code" required placeholder="CP-XXXXXX" value={passwordId} onChange={e=>setPasswordId(e.target.value)}/></label><button type="submit" disabled={loading} className={styles.primary}>{loading ? "Checking your invitation…" : "Continue to your interview"}<ArrowRight size={17}/></button></form><p className={styles.loginHelp}>Can’t find your invitation?<br />Your recruiter can help with your access code.</p></section></main><footer className={styles.pageFooter}><span>Chirayu Power · People & possibilities</span><span>A thoughtful beginning.</span></footer>
+  </div>;
 }

@@ -1,23 +1,34 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
-import Agent from "@/components/Agent";
-import DisplayTechIcons from "@/components/DisplayTechIcons";
+import { useParams } from "next/navigation";
+import dynamic from "next/dynamic";
+import PortalLoading from "@/components/PortalLoading";
+const Agent = dynamic(() => import("@/components/Agent"), {
+  loading: () => <PortalLoading />,
+});
+import OneOnOneStatus from "@/components/OneOnOneStatus";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
-import { Loader2 } from "lucide-react";
 
 export default function InterviewDetails() {
   const params = useParams();
-  const router = useRouter();
   const id = params.id as string;
 
   const [interview, setInterview] = useState<any | null>(null);
   const [feedback, setFeedback] = useState<any | null>(null);
   const [candidateName, setCandidateName] = useState("Candidate");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
+    const controller = new AbortController();
+    let disposed = false;
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    setLoading(true);
+    setError("");
+    setInterview(null);
+    setFeedback(null);
     const name = localStorage.getItem("candidate_name") || "Candidate";
     setCandidateName(name);
 
@@ -33,12 +44,12 @@ export default function InterviewDetails() {
             questions: [
               "What is your experience designing solar arrays?",
               "Explain how to minimize shading losses in a PV array.",
-              "How do you configure solar strings for string inverters?"
+              "How do you configure solar strings for string inverters?",
             ],
             job_description: "Solar EPC Engineering project designer",
             company_knowledge: "Chirayu Power Pvt. Ltd. solar EPC services",
             ai_model: "gemini-2.5-flash",
-            resume: "Mock candidate resume details"
+            resume: "Mock candidate resume details",
           });
           setFeedback(null);
           setLoading(false);
@@ -50,107 +61,97 @@ export default function InterviewDetails() {
           .from("interviews")
           .select("*")
           .eq("id", id)
+          .abortSignal(controller.signal)
           .single();
 
+        if (disposed) return;
         if (interviewErr || !interviewData) {
           console.error("Failed to load interview:", interviewErr);
-          router.replace("/");
-          return;
+          throw new Error(
+            "We couldn’t load this interview. Please try again or check your invitation.",
+          );
         }
 
-        setInterview(interviewData);
-
-        // Fetch feedback details
-        const { data: feedbackData, error: feedbackErr } = await supabase
-          .from("feedback")
-          .select("*")
-          .eq("interview_id", id)
-          .limit(1);
-
-        if (feedbackErr) {
-          console.error("Failed to load feedback:", feedbackErr);
-        } else if (feedbackData && feedbackData.length > 0) {
-          setFeedback(feedbackData[0]);
+        if (!disposed) {
+          setInterview(interviewData);
+          setLoading(false);
         }
+        // Feedback is optional for entering the room. Do not put it on the critical path.
       } catch (err) {
-        console.error("Failed to load active interview details:", err);
+        if (!disposed)
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Couldn’t load your interview. Please try again.",
+          );
       } finally {
-        setLoading(false);
+        clearTimeout(timeout);
+        if (!disposed) setLoading(false);
       }
     };
 
     if (id) {
-      loadData();
+      void loadData();
+      if (isSupabaseConfigured) {
+        void supabase
+          .from("feedback")
+          .select("id")
+          .eq("interview_id", id)
+          .limit(1)
+          .abortSignal(controller.signal)
+          .then(({ data }) => {
+            if (!disposed && data?.[0]) setFeedback(data[0]);
+          });
+      }
     }
-  }, [id, router]);
+    return () => {
+      disposed = true;
+      clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [id, attempt]);
 
-  if (loading) {
+  if (loading) return <PortalLoading />;
+  if (error)
     return (
-      <div className="flex flex-col justify-center items-center py-40 gap-4">
-        <Loader2 className="animate-spin text-primary-blue h-8 w-8" />
-        <span className="text-xs text-soft-gray font-semibold">
-          Initiating Interview Environment...
-        </span>
-      </div>
+      <section className="mx-auto max-w-xl px-8 py-16" role="alert">
+        <h1 className="mb-3 text-xl font-medium">Let’s try that again</h1>
+        <p className="text-sm text-slate-500">{error}</p>
+        <button
+          onClick={() => setAttempt((a) => a + 1)}
+          className="mt-6 rounded-lg bg-primary-blue px-5 py-2.5 text-sm text-white"
+        >
+          Retry loading
+        </button>
+      </section>
     );
-  }
 
   if (!interview) {
     return null;
   }
 
+  if (interview.mode === "one_on_one") {
+    return (
+      <div className="mx-auto max-w-5xl px-6 py-10">
+        <h1 className="mb-6 text-2xl">{interview.role} interview</h1>
+        <OneOnOneStatus interview={interview} />
+      </div>
+    );
+  }
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
-      {/* Interview Header Banner */}
-      <div className="bg-white border border-border-gray rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 animate-fadeIn">
-        <div className="flex items-center gap-5">
-          {/* Rebranded Header Icon */}
-          <div className="size-16 rounded-full bg-primary-blue/5 border border-primary-blue/10 flex items-center justify-center shrink-0">
-            <svg
-              width="32"
-              height="32"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              className="text-primary-blue"
-            >
-              <rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="2" />
-              <path d="M4 10H20M4 15H20M10 4V20M15 4V20" stroke="currentColor" strokeWidth="1" />
-              <circle cx="12" cy="12" r="2" fill="#F4B400" />
-            </svg>
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-dark-100 capitalize">
-              {interview.role} Interview
-            </h1>
-            <div className="mt-1.5">
-              <DisplayTechIcons techStack={interview.techstack || []} />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-blue-50 border border-primary-blue/20 text-primary-blue text-xs font-bold px-4 py-2 rounded-full uppercase tracking-wider">
-          {interview.type}
-        </div>
-      </div>
-
-      {/* Active Mock Interview Session Panel */}
-      <div className="bg-white border border-border-gray rounded-2xl p-6 shadow-sm">
-        <Agent
-          userName={candidateName}
-          userId="candidate-user"
-          interviewId={id}
-          type="interview"
-          questions={interview.questions}
-          jobDescription={interview.job_description}
-          companyKnowledge={interview.company_knowledge}
-          aiModel={interview.ai_model}
-          resume={interview.resume}
-          feedbackId={feedback?.id}
-          role={interview.role}
-          systemPrompt={interview.system_prompt}
-        />
-      </div>
-    </div>
+    <Agent
+      userName={candidateName}
+      userId="candidate-user"
+      interviewId={id}
+      type="interview"
+      questions={interview.questions}
+      jobDescription={interview.job_description}
+      companyKnowledge={interview.company_knowledge}
+      aiModel={interview.ai_model}
+      resume={interview.resume}
+      feedbackId={feedback?.id}
+      role={interview.role}
+      systemPrompt={interview.system_prompt}
+    />
   );
 }
