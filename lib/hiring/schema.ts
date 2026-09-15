@@ -9,7 +9,7 @@ export const fieldSchema = z.object({
 }).refine(f => f.type !== "select" || f.options.length > 0, "Select fields need options");
 export const campaignSchema = z.object({
   id: z.string().uuid().optional(),
-  role: z.enum(["Sales Executive / BDM", "O&M Executive", "Technician", "Tendering Manager", "Finance Manager"]),
+  role: z.string().trim().min(2).max(150),
   active: z.boolean(),
   locations: z.array(z.string().trim().min(1).max(100)).max(100),
   description: z.string().trim().min(1).max(5000),
