@@ -1,15 +1,26 @@
 .dashboard {
-  max-width: 1600px;
-  margin: auto;
+  max-width: none;
   color: #24384e;
   animation: arrive 0.45s ease-out;
-}
-.heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 24px;
+  /* Matches the hero video's own ending tone (sampled from its bottom edge)
+     so the dotted area below the hero reads as a continuation of it instead
+     of a visibly lighter band starting right where the video stops. */
+  background-color: #d9dbdd;
+  background-image: radial-gradient(#b7c0c8 1px, transparent 1px);
+  background-size: 14px 14px;
+  /* .content (PortalShell) has its own min-height floor to keep the page
+     full-height even with little content, and that reserved space sits
+     below this element inside .content's own (transparent) box -- without
+     matching it here, short pages showed a gap of the page's plain white
+     background instead of this same tone. */
+  /* .dashboard's own top edge already sits flush with .content's top border
+     edge (the same margin-collapse .hero relies on for its own bleed), so
+     matching .content's min-height here, from that same starting point,
+     reaches .content's true bottom edge too -- deliberately overlapping
+     where .content's bottom padding would otherwise leave empty,
+     transparent (page-background-colored) space below short pages. */
+  min-height: calc(100dvh - 68px);
+  margin-bottom: -28px;
 }
 .eyebrow {
   font-size: 9px !important;
@@ -17,21 +28,6 @@
   letter-spacing: 1.6px;
   color: #687e94;
   margin: 0 0 9px;
-}
-.heading h1 {
-  font-size: clamp(25px, 2.6vw, 36px);
-  font-weight: 650;
-  letter-spacing: -1.2px;
-  color: #084d91;
-  line-height: 1.2;
-  margin: 0 0 8px;
-}
-.heading h1 span {
-  color: #e5aa00;
-}
-.heading p {
-  font-size: 12px;
-  color: #62758a;
 }
 .textLink {
   display: inline-flex;
@@ -45,80 +41,127 @@
 .textLink:hover {
   text-decoration: underline;
 }
+/* One continuous, unboxed band: the "welcome" heading and the "Good
+   conversations" copy + block pattern live together with no card/border
+   between them, and it spans the full content width instead of sitting in a
+   rounded container. */
 .hero {
-  min-height: 300px;
+  min-height: 580px;
   position: relative;
-  overflow: hidden;
-  border-radius: 14px;
+  /* No overflow:hidden here: .heroPattern below intentionally extends past
+     this element's own top edge (by the navbar's height) so the video also
+     shows behind the navbar -- clipping it here would cut that off right at
+     the navbar boundary. */
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 4px 0 32px;
+  /* Cancels the portal shell's own content padding (28px top, 32px sides) so
+     the hero -- including the video -- sits flush against the header bar
+     above it and runs edge to edge, instead of floating in a padded box. */
+  margin: -28px -32px 0;
+  width: calc(100% + 64px);
+  background: #f8fafc;
+}
+.heroTop {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 32px;
-  gap: 28px;
-  background: #dbe5ec;
-}
-.heroImage {
-  object-fit: cover;
-  object-position: center 55%;
-  animation: panorama 1.2s ease-out both;
-}
-.hero:after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    90deg,
-    rgba(12, 36, 57, 0.65),
-    rgba(12, 36, 57, 0.08) 72%
-  );
-  pointer-events: none;
-}
-.heroCopy {
+  gap: 20px;
   position: relative;
   z-index: 1;
-  max-width: 570px;
+  padding: 0 32px;
 }
-.heroLabel {
+.heroTopLead {
   display: flex;
-  gap: 10px;
   align-items: center;
-  font-size: 9px;
-  letter-spacing: 1.8px;
-  font-weight: 600;
-  color: white;
+  gap: 16px;
 }
-.heroLabel span {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #ffc21d;
-}
-.heroCopy h2 {
-  font-size: clamp(28px, 3vw, 43px);
+.heroTop h1 {
+  font-size: clamp(25px, 2.6vw, 36px);
   font-weight: 650;
-  letter-spacing: -1.3px;
-  line-height: 1.14;
-  color: white;
-  margin: 23px 0 16px;
+  letter-spacing: -1.2px;
+  color: #084d91;
+  line-height: 1.2;
+  margin: 0 0 8px;
 }
-.heroCopy em {
-  font-style: normal;
-  color: #ffcf40;
+.heroTop h1 span {
+  color: #e5aa00;
 }
-.heroCopy p {
-  color: #fff;
+.heroTopLead > div > p {
   font-size: 12px;
+  color: #62758a;
+}
+.heroMain {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 28px;
+  padding: 0 32px;
+}
+/* The animated architectural render (solar rooftops), filling the entire
+   hero as a full-bleed background -- the heading and next-step card sit on
+   top of it. A native <video> at its real 1920x1080 source resolution: the
+   original still-image (AVIF) approach was a 800x450 downscale of this same
+   footage and looked pixelated/over-zoomed once stretched across the full
+   hero width; video also has far more consistent autoplay support than
+   animated-AVIF across browsers. */
+/* Wraps the video and owns the positioning/clipping that used to live on
+   .heroPattern itself. Needed once the hero grew tall enough that
+   object-fit: cover became height-constrained (box aspect narrower than the
+   1920x1080 source), which left zero vertical overflow for object-position
+   to redistribute -- the full source height, including a lot of empty sky
+   at the very top, was being shown no matter what Y value was used. This
+   wrapper clips the extra zoom applied to the video below. */
+.heroPatternWrap {
+  position: absolute;
+  top: calc(-1 * var(--portal-nav-height, 68px));
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(100% + var(--portal-nav-height, 68px));
+  overflow: hidden;
+}
+.heroPattern {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* The extra scale (beyond what cover alone provides) is what actually
+     crops the empty sky away -- anchored at the bottom so the
+     already-good framing of the buildings/street there doesn't shift. */
+  transform-origin: 50% 100%;
+  transform: scale(1.3);
+  display: block;
+  background: #ffffff00;
+}
+/* The sun: the Chirayu brand mark, leading the "Welcome back" heading. */
+.heroSun {
+  flex-shrink: 0;
+  opacity: 0;
+  animation: sunRise 0.6s ease-out both;
+}
+@keyframes sunRise {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 .nextCard {
   position: relative;
   z-index: 1;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid #fff;
-  border-radius: 10px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
   padding: 24px;
   width: 290px;
   flex-shrink: 0;
-  box-shadow: 0 8px 30px #132e4410;
 }
 .nextCard h3 {
   font-size: 19px;
@@ -144,7 +187,6 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  border-radius: 6px;
   min-height: 39px;
   padding: 10px 13px;
   font-size: 11px;
@@ -170,33 +212,17 @@
 .secondary:hover {
   background: #eaf3fc;
 }
-.quickLinks {
-  display: flex;
-  align-items: center;
-  gap: 26px;
-  padding: 17px 4px;
-  margin-bottom: 10px;
-  border-bottom: 1px solid #e1e8ef;
-  font-size: 10px;
-  color: #5e7488;
-}
-.quickLinks a,
-.quickLinks span {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-.quickLinks a:first-of-type {
-  margin-left: auto;
-}
-.quickLinks a:hover {
-  color: #084d91;
-  text-decoration: underline;
-}
+
 .columns {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 290px;
   gap: 22px;
+  /* Needed when this is the in-hero row sitting on the video: .heroPattern
+     is position:absolute, which paints above static-flow siblings
+     regardless of DOM order, same reason .heroTop/.heroMain/.nextCard are
+     positioned -- harmless below the hero where there's no video sibling. */
+  position: relative;
+  z-index: 1;
 }
 .mainColumn,
 .rail {
@@ -208,9 +234,17 @@
 .panel {
   background: white;
   border: 1px solid #e0e8f0;
-  border-radius: 11px;
   padding: 24px;
   min-width: 0;
+}
+/* The two panels that now sit directly on the hero video (inside .hero,
+   below .heroMain) instead of on the dotted dashboard background below it --
+   transparent so the video shows through instead of being covered by a
+   solid card. */
+.panelOnVideo {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(6px);
 }
 .panelHeader {
   display: flex;
@@ -254,7 +288,6 @@
   border-bottom: 1px solid #dce6ef;
 }
 .badge {
-  border-radius: 4px;
   background: #fff5d9;
   color: #876214;
   padding: 5px 7px;
@@ -295,7 +328,6 @@
 }
 .track {
   height: 8px;
-  border-radius: 3px;
   background: #ecf1f6;
   overflow: hidden;
 }
@@ -303,7 +335,6 @@
   display: block;
   height: 100%;
   background: #1c70ba;
-  border-radius: 3px;
   transform-origin: left;
   animation: grow 0.7s ease-out;
 }
@@ -365,7 +396,6 @@
 .emptyChart i {
   width: 24px;
   background: #d9e8f5;
-  border-radius: 4px 4px 0 0;
   height: 70%;
 }
 .emptyChart i:nth-child(2) {
@@ -426,7 +456,6 @@
   font-size: 9px;
   display: inline-block;
   padding: 4px 7px;
-  border-radius: 4px;
   color: #305f87;
   background: #eef5fb;
 }
@@ -485,7 +514,6 @@
 .missing {
   color: #8c6a1d;
   background: #fff7df;
-  border-radius: 4px;
   padding: 2px 6px;
   font-size: 9px;
 }
@@ -514,7 +542,6 @@
   height: 10px;
   width: 4px;
   background: #2375b8;
-  border-radius: 5px;
   animation: waveIn 0.7s ease-out both;
 }
 .wave i:nth-child(2),
@@ -583,14 +610,6 @@
     transform: translateY(0);
   }
 }
-@keyframes panorama {
-  from {
-    transform: scale(1.035);
-  }
-  to {
-    transform: scale(1);
-  }
-}
 @keyframes waveIn {
   from {
     transform: scaleY(0.3);
@@ -604,7 +623,7 @@
     grid-template-columns: minmax(0, 1fr) 330px;
   }
   .hero {
-    min-height: 330px;
+    min-height: 620px;
   }
   .nextCard {
     width: 320px;
@@ -615,7 +634,11 @@
 }
 @media (max-width: 1100px) {
   .hero {
-    padding: 24px;
+    padding: 4px 0 24px;
+    gap: 20px;
+    min-height: 420px;
+  }
+  .heroMain {
     gap: 20px;
   }
   .nextCard {
@@ -637,9 +660,6 @@
     font-size: 8px;
     letter-spacing: 1px;
   }
-  .heroCopy h2 {
-    font-size: 29px;
-  }
 }
 @media (max-width: 900px) {
   .columns {
@@ -652,9 +672,6 @@
   }
   .note {
     grid-column: 1/-1;
-  }
-  .heroCopy h2 {
-    font-size: 26px;
   }
   .nextCard {
     width: 225px;
@@ -669,34 +686,40 @@
     margin-left: 0;
   }
 }
+@media (max-width: 760px) {
+  .hero {
+    margin: -22px -16px 0;
+    width: calc(100% + 32px);
+  }
+  .heroTop,
+  .heroMain {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
 @media (max-width: 600px) {
-  .heading {
+  .heroTop {
     align-items: flex-start;
   }
-  .heading > .textLink {
+  .heroTop > .textLink {
     display: none;
   }
   .hero {
     display: block;
-    padding: 24px;
+    padding: 4px 0 24px;
     min-height: 0;
+    gap: 0;
   }
-  .heroImage {
-    object-position: 35% center;
+  .heroMain {
+    display: block;
   }
-  .heroCopy h2 {
-    font-size: 32px;
-  }
-  .heroCopy p {
-    font-size: 11px;
+  .heroPattern {
+    display: none;
   }
   .nextCard {
     width: 100%;
     margin-top: 26px;
     padding: 20px;
-  }
-  .hero:after {
-    background: #15344b55;
   }
   .rail {
     display: flex;

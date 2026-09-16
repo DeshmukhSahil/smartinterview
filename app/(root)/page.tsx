@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -60,6 +60,34 @@ export default function Home() {
   const [attempt, setAttempt] = useState(0);
   const [selected, setSelected] = useState("");
   const [profile, setProfile] = useState<Record<string, string>>({});
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setPrefersReducedMotion(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  // Boomerang loop: play the clip forward, then play a pre-rendered reverse
+  // encode of the same clip back to the start, alternating forever -- so the
+  // loop point is a smooth direction change instead of a hard cut back to
+  // frame 0. (<video> doesn't support playbackRate: -1 in practice, so this
+  // is two real files swapped on "ended" rather than true reverse playback.)
+  const heroVideoRef = useRef<HTMLVideoElement>(null);
+  const [heroVideoDirection, setHeroVideoDirection] = useState<"forward" | "reverse">("forward");
+  useEffect(() => {
+    const video = heroVideoRef.current;
+    if (!video || prefersReducedMotion) return;
+    const handleEnded = () => setHeroVideoDirection((d) => (d === "forward" ? "reverse" : "forward"));
+    video.addEventListener("ended", handleEnded);
+    return () => video.removeEventListener("ended", handleEnded);
+  }, [prefersReducedMotion]);
+  useEffect(() => {
+    const video = heroVideoRef.current;
+    if (!video || prefersReducedMotion) return;
+    video.load();
+    void video.play().catch(() => {});
+  }, [heroVideoDirection, prefersReducedMotion]);
   useEffect(() => {
     const controller = new AbortController();
     let disposed = false;
@@ -190,40 +218,48 @@ export default function Home() {
               : "Ready to start";
   return (
     <div className={s.dashboard}>
-      <div className={s.heading}>
-        <div>
-          <p className={s.eyebrow}>YOUR CANDIDATE WORKSPACE</p>
-          <h1>
-            Welcome back, {name.split(" ")[0]}
-            <span>.</span>
-          </h1>
-          <p>Your conversations, progress and next steps. All in one place.</p>
-        </div>
-        <Link className={s.textLink} href="/allinterviews">
-          All interviews <ArrowUpRight size={16} />
-        </Link>
-      </div>
       <section className={s.hero} aria-label="Chirayu Power interview portal">
-        <Image
-          src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/brand/solar-hero.webp`}
-          alt="Aerial view of the solar installation featured on Chirayu Power’s website"
-          fill
-          priority
-          sizes="(max-width:760px) 100vw, 80vw"
-          className={s.heroImage}
-        />
-        <div className={s.heroCopy}>
-          <span className={s.heroLabel}>
-            CHIRAYU HIRE <span /> ENERGY WITH INTEGRITY
-          </span>
-          <h2>
-            Good conversations.
-            <br />
-            <em>Brighter possibilities.</em>
-          </h2>
-          <p>A place for your experience, ideas and ambition.</p>
+        <div className={s.heroPatternWrap}>
+          <video
+            ref={heroVideoRef}
+            className={s.heroPattern}
+            aria-hidden="true"
+            poster={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/brand/hero-animation-fallback.jpg`}
+            autoPlay={!prefersReducedMotion}
+            muted
+            playsInline
+            preload="auto"
+          >
+            <source
+              src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/brand/hero-animation${heroVideoDirection === "reverse" ? "-reverse" : ""}.mp4`}
+              type="video/mp4"
+            />
+          </video>
         </div>
-        <div className={s.nextCard}>
+        <div className={s.heroTop}>
+          <div className={s.heroTopLead}>
+            <Image
+              src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/assets/chirayu-icon2.png`}
+              alt=""
+              width={44}
+              height={44}
+              className={s.heroSun}
+            />
+            <div>
+              <p className={s.eyebrow}>YOUR CANDIDATE WORKSPACE</p>
+              <h1>
+                Welcome back, {name.split(" ")[0]}
+                <span>.</span>
+              </h1>
+              <p>Your conversations, progress and next steps. All in one place.</p>
+            </div>
+          </div>
+          <Link className={s.textLink} href="/allinterviews">
+            All interviews <ArrowUpRight size={16} />
+          </Link>
+        </div>
+        <div className={s.heroMain}>
+          <div className={s.nextCard}>
           <span className={s.eyebrow}>
             {loading
               ? "YOUR INTERVIEWS"
@@ -271,30 +307,13 @@ export default function Home() {
               : "View interviews"}
             <ArrowRight size={16} />
           </Link>
+          </div>
         </div>
-      </section>
-      <div className={s.quickLinks}>
-        <span>
-          <Check size={15} /> AI & one-on-one interviews
-        </span>
-        <a
-          href="https://chirayupower.com/about-us/"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Get to know Chirayu <ArrowUpRight size={14} />
-        </a>
-        <a
-          href="https://chirayupower.com/services-solutions/"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Explore our work <ArrowUpRight size={14} />
-        </a>
-      </div>
-      <div className={s.columns}>
-        <div className={s.mainColumn}>
-          <section className={s.panel} aria-labelledby="insights-title">
+        <div className={s.columns}>
+          <section
+            className={`${s.panel} ${s.panelOnVideo}`}
+            aria-labelledby="insights-title"
+          >
             <div className={s.panelHeader}>
               <div>
                 <span className={s.eyebrow}>AFTER THE CONVERSATION</span>
@@ -426,6 +445,48 @@ export default function Home() {
               </div>
             )}
           </section>
+          <section className={`${s.panel} ${s.panelOnVideo}`}>
+            <div className={s.panelHeader}>
+              <h2>Profile essentials</h2>
+              <UserRound size={18} />
+            </div>
+            <div className={s.profileSummary}>
+              <div
+                className={s.ring}
+                style={{
+                  background: `conic-gradient(#084d91 ${percent}%, #eaf0f6 0)`,
+                }}
+              >
+                <strong>{percent}%</strong>
+              </div>
+              <div>
+                <strong>
+                  {checks.filter((c) => c.done).length} of 5 details
+                </strong>
+                <p>Keep your contact details and preferences ready.</p>
+              </div>
+            </div>
+            <ul className={s.checks}>
+              {checks.map((c) => (
+                <li key={c.label}>
+                  <span>{c.label}</span>
+                  {c.done ? (
+                    <Check size={16} aria-label="Complete" />
+                  ) : (
+                    <span className={s.missing}>Add</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <Link className={s.secondary} href="/profile">
+              Update profile <ArrowRight size={15} />
+            </Link>
+            <p className={s.fine}>Preferences are saved in this browser.</p>
+          </section>
+        </div>
+      </section>
+      <div className={s.columns}>
+        <div className={s.mainColumn}>
           <section className={s.panel}>
             <div className={s.panelHeader}>
               <div>
@@ -509,44 +570,6 @@ export default function Home() {
           </section>
         </div>
         <aside className={s.rail}>
-          <section className={s.panel}>
-            <div className={s.panelHeader}>
-              <h2>Profile essentials</h2>
-              <UserRound size={18} />
-            </div>
-            <div className={s.profileSummary}>
-              <div
-                className={s.ring}
-                style={{
-                  background: `conic-gradient(#084d91 ${percent}%, #eaf0f6 0)`,
-                }}
-              >
-                <strong>{percent}%</strong>
-              </div>
-              <div>
-                <strong>
-                  {checks.filter((c) => c.done).length} of 5 details
-                </strong>
-                <p>Keep your contact details and preferences ready.</p>
-              </div>
-            </div>
-            <ul className={s.checks}>
-              {checks.map((c) => (
-                <li key={c.label}>
-                  <span>{c.label}</span>
-                  {c.done ? (
-                    <Check size={16} aria-label="Complete" />
-                  ) : (
-                    <span className={s.missing}>Add</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-            <Link className={s.secondary} href="/profile">
-              Update profile <ArrowRight size={15} />
-            </Link>
-            <p className={s.fine}>Preferences are saved in this browser.</p>
-          </section>
           <section className={`${s.panel} ${s.prepare}`}>
             <div className={s.wave} aria-hidden="true">
               {[1, 2, 3, 4, 5].map((n) => (

@@ -37,21 +37,25 @@ export async function POST(r: Request, { params }: { params: Promise<{ id: strin
     const db = interviewDb();
     const { data: interview, error } = await db.from("interviews").select("*").eq("id", id).single();
     if (error || !interview) throw new Error("Interview not found");
-    if (interview.mode !== "one_on_one") throw new Error("Notes are only available for one-on-one interviews");
+    // HR remarks apply to any interview mode — the candidate has already applied/
+    // completed their submission by this point regardless of whether they went
+    // through an AI-assisted assessment or a one-on-one call.
+    const isOneOnOne = interview.mode === "one_on_one";
 
     const now = new Date().toISOString();
     const updated = await db.from("interviews").update({
-      hr_notes: hrNotes, notes_submitted_at: now, notes_submitted_by: hr.email, interview_status: "completed",
+      hr_notes: hrNotes, notes_submitted_at: now, notes_submitted_by: hr.email,
+      ...(isOneOnOne ? { interview_status: "completed" } : {}),
     }).eq("id", id);
     if (updated.error) throw updated.error;
 
     const text = `Interview report — ${interview.role}
 Candidate: ${interview.candidate_name}
-
+${isOneOnOne ? `
 --- AI-drafted notes (captured live during the call) ---
 ${formatNotes(interview.ai_notes as InterviewNotes | null)}
-
---- HR notes (reviewed and edited by ${hr.email}) ---
+` : ""}
+--- HR remarks (reviewed by ${hr.email}) ---
 ${formatNotes(hrNotes)}
 
 Chirayu Power HR Team`;
