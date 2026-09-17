@@ -1,8 +1,9 @@
 import { Toaster } from "sonner";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Montserrat } from "next/font/google";
 
 import "./globals.css";
+import "./candidate-foundations.css";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -14,6 +15,8 @@ const montserrat = Montserrat({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700", "800", "900"],
 });
+
+export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 
 export const metadata: Metadata = {
   title: "Chirayu Power Pvt. Ltd. - Careers & Interview Portal",
@@ -35,9 +38,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="light">
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1" />
-      </head>
       <body className={`${inter.variable} ${montserrat.variable} ${montserrat.className} antialiased bg-background text-foreground`}>
         {children}
         <Toaster />

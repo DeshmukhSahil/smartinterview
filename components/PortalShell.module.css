@@ -1,167 +1,174 @@
 .shell {
-  display: flex;
   min-height: 100dvh;
-  background: #f7f9fb00 !important;
-  color: #263440;
-  font-family: var(--font-inter), Arial, sans-serif;
+  /* Backdrop for the glassmorphic cards on the overview page -- glass panels
+     need visible color/tone behind them to read as glass at all. Subtle and
+     brand-toned so pages using plain opaque cards (.hire-card) still look
+     right against it. */
+  background: linear-gradient(160deg, #eef4fb 0%, #f7f6f2 55%, #f4eee0 100%);
 }
-.sidebar {
-  width: 228px;
-  flex-shrink: 0;
-  background: #ffffff;
-  border-right: 1px solid #e9edf1;
-  display: flex;
-  flex-direction: column;
-  position: sticky;
-  top: 0;
-  height: 100dvh;
-  padding: 30px 19px 20px;
-}
-.logo {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 5px 32px;
-}
-.logo > button {
-  display: none;
-}
-.sectionLabel {
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 1.5px;
-  color: #9ba6b0;
-  margin: 4px 12px 18px;
-}
-.sidebar nav {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.sidebar nav a {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  padding: 12px;
-  border-radius: 7px;
-  color: #72808f;
-  font-size: 12px;
-  transition: background 0.15s;
-}
-.sidebar nav a:hover {
-  background: #f7f9fb;
-}
-.sidebar nav a[aria-current="page"] {
-  background: #edf4fc;
-  color: #195b9a;
-  font-weight: 500;
-}
-.sidebar nav svg {
-  stroke-width: 1.6;
-}
-.sideNote {
-  margin: auto 10px 26px;
-  padding-top: 40px;
-  color: #8e9aa4;
-}
-.sideNote svg {
-  color: #7891a6;
-}
-.sideNote strong {
-  display: block;
-  font-size: 11px;
-  font-weight: 500;
-  color: #637786;
-  margin: 12px 0 8px;
-  line-height: 1.7;
-}
-.sideNote p {
-  font-size: 10px;
-  line-height: 1.8;
-}
-.sidebar footer {
-  border-top: 1px solid #edf0f4;
-  padding: 19px 8px 0;
-  color: #a0aab2;
-  font-size: 9px;
-}
-.workspace {
-  flex: 1;
-  min-width: 0;
-}
-.navbar {
-  height: 68px;
+.header {
+  border-bottom: 1px solid var(--hire-line);
   background: transparent;
+  position: relative;
+  z-index: 30;
+}
+.headerInner {
+  max-width: 1200px;
+  min-height: 88px;
+  padding: 16px 40px;
+  margin: auto;
   display: flex;
+  align-items: center;
+  gap: 32px;
+}
+.brand {
+  display: inline-flex;
   align-items: center;
   gap: 16px;
-  padding: 0 30px;
-  position: relative;
-  z-index: 25;
+  flex-shrink: 0;
 }
-.breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  font-size: 11px;
-  color: #a0aab4;
-}
-.breadcrumb strong {
+.brand > span {
+  border-left: 1px solid var(--hire-line);
+  padding-left: 16px;
+  font-size: 18px;
   font-weight: 500;
-  color: #60717e;
+  color: var(--hire-ink);
 }
-.profile {
-  margin-left: auto;
+.navigation {
   display: flex;
-  gap: 10px;
   align-items: center;
+  gap: 8px;
+  margin-left: auto;
 }
-.avatar {
+.navigation a,
+.navigation button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: var(--hire-radius);
+  color: var(--hire-muted);
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    color var(--hire-fast),
+    background-color var(--hire-fast);
+}
+.navigation a:hover,
+.navigation button:hover {
+  color: var(--hire-blue);
+  background: var(--hire-blue-wash);
+}
+.navigation a[aria-current="page"] {
+  color: var(--hire-blue);
+  background: var(--hire-blue-wash);
+}
+.account {
+  position: relative;
+}
+.helpButton {
+  width: 44px;
+  height: 44px;
   display: grid;
   place-items: center;
-  width: 33px;
-  height: 33px;
-  border-radius: 50%;
-  background: #f0f4f8;
-  color: #52728c;
-  font-size: 11px;
+  color: var(--hire-muted);
+  border-radius: var(--hire-radius);
+  flex-shrink: 0;
 }
-.profile strong {
-  display: block;
-  font-size: 11px;
-  font-weight: 500;
+.helpButton:hover {
+  background: var(--hire-blue-wash);
+  color: var(--hire-blue);
 }
-.profile div > span {
-  display: block;
-  color: #9ba6b0;
-  font-size: 9px;
-  margin-top: 2px;
+.account summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  border-radius: var(--hire-radius);
 }
-.menu,
-.mobileLogo {
+.account summary::-webkit-details-marker {
   display: none;
 }
+.accountName {
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+}
+.avatar {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--hire-line);
+  background: var(--hire-white);
+  border-radius: 50%;
+  color: var(--hire-blue);
+  font-size: 12px;
+  font-weight: 600;
+}
+.accountPanel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 12px);
+  width: 250px;
+  max-width: calc(100vw - 40px);
+  padding: 8px;
+  background: var(--hire-white);
+  border: 1px solid var(--hire-line);
+  border-radius: var(--hire-radius);
+  box-shadow: var(--hire-shadow);
+  animation: hire-reveal var(--hire-reveal) ease-out;
+}
+.accountPanel p {
+  padding: 12px;
+  border-bottom: 1px solid var(--hire-line);
+  margin-bottom: 4px;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.accountPanel a,
+.accountPanel button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 12px;
+  font-size: 14px;
+  border-radius: 4px;
+  text-align: left;
+}
+.accountPanel a:hover,
+.accountPanel button:hover {
+  background: var(--hire-blue-wash);
+  color: var(--hire-blue);
+}
 .content {
-  --portal-nav-height: 68px;
-  padding: 34px;
-  min-height: calc(100dvh - 68px);
+  --portal-nav-height: 88px;
+  width: 100%;
+  max-width: 1200px;
+  margin: auto;
+  padding: 48px 40px 64px;
+  min-height: calc(100dvh - 88px);
 }
 .interview {
+  max-width: none;
   padding: 0;
   container-type: inline-size;
   container-name: portal;
 }
-.scrim {
-  display: none;
-}
-.shell a:focus-visible,
-.shell button:focus-visible {
-  outline: 2px solid #2c6ba3;
-  outline-offset: 4px;
-}
 .interview [data-room-header] {
-  height: 55px;
-  padding: 0 30px;
+  min-height: 56px;
+  height: auto;
+  padding: 16px max(20px, calc((100vw - 1120px) / 2));
 }
 .interview [data-room-header] > a {
   display: none;
@@ -169,166 +176,199 @@
 .interview [data-room-header] > div:first-of-type {
   border: 0;
   padding-left: 0;
-  font-size: 12px;
+  font-size: 14px;
 }
 .interview [data-interview-room]:fullscreen [data-room-header] > a {
   display: flex;
 }
-@media (max-width: 1000px) and (min-width: 761px) {
-  .sidebar {
-    width: 195px;
-    padding-left: 13px;
-    padding-right: 13px;
+.skipLink {
+  position: fixed;
+  left: 20px;
+  top: 12px;
+  transform: translateY(-180%);
+  z-index: 100;
+  padding: 12px 20px;
+  border-radius: var(--hire-radius);
+  background: var(--hire-blue);
+  color: white;
+}
+.skipLink:focus {
+  transform: none;
+}
+@media (max-width: 800px) {
+  .headerInner {
+    gap: 8px;
+    padding: 16px 24px;
   }
-  .navbar {
-    padding: 0 22px;
+  .brand {
+    gap: 12px;
+  }
+  .brand img {
+    width: 96px;
+    height: auto;
+  }
+  .brand > span {
+    padding-left: 12px;
+    font-size: 16px;
+  }
+  .navigation {
+    gap: 4px;
+  }
+  .navigation a,
+  .navigation button {
+    padding-inline: 8px;
+  }
+  .accountName {
+    display: none;
   }
   .content {
-    padding: 24px;
+    padding: 40px 24px 48px;
   }
   .interview {
     padding: 0;
   }
 }
-@media (max-width: 760px) {
-  .sidebar {
-    display: none;
-    position: fixed;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 240px;
-    z-index: 60;
+@media (max-width: 600px) {
+  .headerInner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 44px 52px;
+    padding: 16px 20px 8px;
+    min-height: 132px;
+    flex-wrap: wrap;
+    gap: 8px;
   }
-  .sidebar.open {
-    display: flex;
+  .brand {
+    gap: 12px;
   }
-  .logo > button {
-    display: flex;
+  .brand > span {
+    padding-left: 12px;
   }
-  .scrim {
-    display: block;
-    position: fixed;
-    inset: 0;
-    background: #1d2a3d55;
-    z-index: 59;
+  .account {
+    margin-left: 0;
   }
-  .menu {
-    display: flex;
-    color: #52677a;
+  .helpButton {
+    margin-left: auto;
   }
-  .mobileLogo {
-    display: block;
+  .navigation {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    order: 3;
+    width: 100%;
+    margin: 0;
+    justify-content: space-between;
+    gap: 4px;
   }
-  .breadcrumb {
-    display: none;
-  }
-  .navbar {
-    height: 62px;
-    padding: 0 18px;
-    gap: 14px;
-  }
-  .profile > div {
-    display: none;
+  .navigation a,
+  .navigation button {
+    padding: 10px;
   }
   .content {
-    --portal-nav-height: 62px;
-    padding: 22px 18px;
+    --portal-nav-height: 132px;
+    padding: 32px 20px 48px;
+    min-height: calc(100dvh - 132px);
   }
   .interview {
     padding: 0;
-  }
-  .interview [data-room-header] {
-    height: 48px;
-    padding: 0 20px;
-  }
-  .interview [data-room-header] > div:first-of-type {
-    display: block;
-    max-width: 55%;
-    font-size: 10px;
   }
 }
 
-/* The same project panorama connects the navigation and dashboard. */
-.brandStory {
-  margin-top: auto;
-  margin-bottom: 22px;
-  padding-top: 36px;
-  display: block;
-  color: #084d91;
-}
-.brandPhoto {
-  height: clamp(110px, 22vh, 230px);
-  background: #eaf1f7 url("/brand/solar-sidebar.webp") center/cover;
-  border-radius: 10px 10px 0 0;
-}
-.brandStory > div:last-child {
-  background: #f0f6fc;
-  padding: 16px 13px;
-  border-radius: 0 0 10px 10px;
-}
-.brandStory span {
-  display: block;
-  font-size: 8px;
-  line-height: 1.6;
-  letter-spacing: 1.3px;
-  color: #536d86;
-}
-.brandStory strong {
-  display: block;
-  font-size: 17px;
-  letter-spacing: -0.5px;
-  margin: 8px 0;
-}
-.brandStory p {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 5px;
-  font-size: 10px;
-}
-.brandStory:hover p {
-  text-decoration: underline;
-}
+/* Sidebar composition requested for the candidate dashboard. */
 .sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: 232px;
+  background: var(--hire-white);
+  border-right: 1px solid var(--hire-line);
+  display: flex;
+  flex-direction: column;
+  z-index: 35;
   overflow-y: auto;
 }
-.sectionLabel {
-  color: #687c90;
+.sidebarBrand {
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
 }
-.sidebar nav a {
-  color: #526679;
-  font-size: 13px;
+.sidebarBrand > span {
+  font-size: 18px;
+  color: var(--hire-muted);
+}
+.sidebar nav {
+  padding: 0 14px;
+  display: grid;
+  gap: 8px;
+}
+.sidebar nav a,
+.sidebar nav button {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  min-height: 48px;
+  text-align: left;
+  color: var(--hire-ink);
+  font-size: 14px;
+  border-radius: 6px;
+}
+.sidebar nav a[aria-current],
+.sidebar nav a:hover,
+.sidebar nav button:hover:not(:disabled) {
+  background: var(--hire-blue-wash);
+  color: var(--hire-blue);
+}
+.soon {
+  margin-left: auto;
+  color: var(--hire-muted);
+}
+/* The image itself now carries the "Building a brighter tomorrow" heading
+   and copy (see sidebar-story.webp) -- no HTML text overlay needed. */
+.sidebarStory {
+  margin: auto 0 0;
+  min-height: 280px;
+  background: center / cover no-repeat;
 }
 .breadcrumb {
-  color: #65778a;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--hire-muted);
+  margin-right: auto;
 }
-.profile div > span {
-  color: #65778a;
+.breadcrumb > span {
+  color: var(--hire-ink);
+  font-weight: 500;
 }
-.content {
-  padding: 28px 32px;
-}
-.interview {
-  padding: 0;
-}
-@media (max-width: 760px) {
-  .content {
-    padding: 22px 16px;
+@media (min-width: 901px) {
+  .shell {
+    padding-left: 232px;
   }
-  .interview {
+  .headerInner {
+    max-width: none;
+    min-height: 72px;
+    padding: 12px 32px;
+    gap: 24px;
+  }
+  .headerInner > .brand,
+  .headerInner > .navigation {
+    display: none;
+  }
+  .content {
+    max-width: 1760px;
+    padding: 20px 28px 32px;
+    --portal-nav-height: 72px;
+    min-height: calc(100dvh - 72px);
+  }
+  .content.interview {
+    max-width: none;
     padding: 0;
   }
-  .brandPhoto {
-    height: 145px;
-  }
 }
-@media (prefers-reduced-motion: reduce) {
-  .shell *,
-  .shell *::before,
-  .shell *::after {
-    animation: none !important;
-    transition: none !important;
-    scroll-behavior: auto !important;
+@media (max-width: 900px) {
+  .sidebar,
+  .breadcrumb {
+    display: none;
   }
 }

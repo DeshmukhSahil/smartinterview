@@ -49,6 +49,62 @@ export async function sendEmail(params: { to: string[]; subject: string; text: s
   });
   if (!response.ok) throw new Error("Email provider did not confirm delivery");
 }
+// Best-effort archive copy in the ERP's existing Google Drive "Applied
+// Resumes" folder, via the ERP's own Apps Script webhook (not part of this
+// app's storage -- hiring-resumes/Supabase Storage above remains the source
+// of truth resume_path points at). Returns null when the integration isn't
+// configured, so callers can treat it as optional.
+export async function driveUploadResume(params: { filename: string; buffer: Buffer; mimeType: string }): Promise<string | null> {
+  const url = process.env.GOOGLE_DRIVE_SCRIPT_URL;
+  const folderId = process.env.GOOGLE_DRIVE_APPLIED_RESUMES_FOLDER_ID;
+  if (!url || !folderId) return null;
+  const response = await fetch(url, {
+    method: "POST", signal: AbortSignal.timeout(20000), headers: { "Content-Type": "text/plain" },
+    body: JSON.stringify({ filename: params.filename, fileData: params.buffer.toString("base64"), mimeType: params.mimeType, folderId }),
+  });
+  if (!response.ok) throw new Error("Resume archive upload did not confirm");
+  const data = await response.json();
+  const driveUrl = typeof data?.driveUrl === "string" ? data.driveUrl : null;
+  if (!driveUrl) throw new Error("Resume archive upload returned no URL");
+  return driveUrl;
+}
+// Gives a candidate a fresh interview attempt (e.g. after a technical or
+// proctoring issue on the original one), cloning only the reusable template
+// fields -- role, questions, job description, etc. -- from an existing
+// interviews.id. Deliberately does NOT set hiring_application_id on the new
+// row: it stays unlinked from whatever application produced the original
+// interview, so the original (with its transcript/proctoring/feedback
+// history intact) is untouched and interviews_hiring_application_unique
+// never comes into play. Works for both pipeline-created and
+// manually-created (ERP "Create Interview") source rows alike.
+export async function retakeInterview(sourceId: string) {
+  const db = interviewDb();
+  const { data: source, error } = await db.from("interviews")
+    .select("candidate_email,candidate_name,role,type,techstack,level,mode,questions,job_description,company_knowledge,system_prompt,ai_model,resume,finalized")
+    .eq("id", sourceId).single();
+  if (error || !source) throw new Error("Original interview was not found");
+  if (!source.candidate_email) throw new Error("This interview has no candidate email on file");
+  const password = `CP-${randomBytes(12).toString("hex").toUpperCase()}`;
+  const created = await db.from("interviews").insert({ ...source, password_id: password })
+    .select("id,password_id,candidate_email,candidate_name,role,mode").single();
+  if (created.error) throw created.error;
+  const interview = created.data;
+  let emailed = true;
+  try {
+    const loginUrl = `${env("HIRING_PUBLIC_URL").replace(/\/$/, "")}/login`;
+    const isOneOnOne = interview.mode === "one_on_one";
+    const subject = "Chirayu Power — new interview access";
+    const text = isOneOnOne
+      ? `Chirayu Power HR has set up a new interview for you for ${interview.role}. This role is filled through a one-on-one interview with our HR team.\n\nLog in to your candidate portal to see your interview once it has been scheduled: ${loginUrl}\nLogin email: ${interview.candidate_email}\nAccess password ID: ${interview.password_id}\n\nKeep these credentials private. Portal access does not confirm selection or an offer.\n\nChirayu Power HR Team`
+      : `Chirayu Power HR has set up a new interview for you for ${interview.role}.\n\nInterview portal: ${loginUrl}\nLogin email: ${interview.candidate_email}\nAccess password ID: ${interview.password_id}\n\nKeep these credentials private. Interview access does not confirm selection or an offer.\n\nChirayu Power HR Team`;
+    await sendEmail({ to: [interview.candidate_email as string], subject, text, idempotencyKey: `retake-${interview.id}` });
+  } catch {
+    // The new interview still exists and its credentials are returned below --
+    // HR can share them manually if the email didn't go out.
+    emailed = false;
+  }
+  return { ...interview, emailed };
+}
 export async function activeCampaign(id: string) {
   const { data, error } = await erp().from("hiring_campaigns").select("*").eq("id", id).eq("active", true).single();
   if (error || !data) throw new Error("Campaign is not available");

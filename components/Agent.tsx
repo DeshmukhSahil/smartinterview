@@ -37,12 +37,11 @@ const ScoreRing = ({ score }: { score: number }) => {
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={dashOffset}
-            style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)" }}
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-3xl font-extrabold text-dark-100">{score}</span>
-          <span className="text-[10px] text-soft-gray font-semibold uppercase tracking-wider">/100</span>
+          <span className="text-xs text-soft-gray font-semibold uppercase tracking-wider">/100</span>
         </div>
       </div>
       <span
@@ -79,18 +78,6 @@ const FeedbackModal = ({
   isGenerating: boolean;
   onClose: () => void;
 }) => {
-  const router = useRouter();
-  const [animateIn, setAnimateIn] = useState(false);
-  const [showBars, setShowBars] = useState(false);
-
-  useEffect(() => {
-    // Slight delay so the modal entrance animation is visible
-    requestAnimationFrame(() => setAnimateIn(true));
-    if (feedback) {
-      setTimeout(() => setShowBars(true), 600);
-    }
-  }, [feedback]);
-
   // Lock body scroll when modal open
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -102,21 +89,12 @@ const FeedbackModal = ({
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-dark-100/60 backdrop-blur-sm"
-        style={{
-          opacity: animateIn ? 1 : 0,
-          transition: "opacity 0.4s ease",
-        }}
         onClick={onClose}
       />
 
       {/* Modal Panel */}
       <div
-        className="relative bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto flex flex-col"
-        style={{
-          transform: animateIn ? "translateY(0) scale(1)" : "translateY(40px) scale(0.96)",
-          opacity: animateIn ? 1 : 0,
-          transition: "transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease",
-        }}
+        className="hire-feedback-panel hire-motion-reveal relative w-full max-w-3xl max-h-[90vh] overflow-y-auto flex flex-col"
       >
         {/* Header Banner */}
         <div className="relative overflow-hidden rounded-t-3xl bg-gradient-to-br from-primary-blue to-[#0c6fd1] px-8 py-8 flex flex-col items-center text-white text-center gap-3">
@@ -155,16 +133,6 @@ const FeedbackModal = ({
                   Our AI is carefully reviewing your transcript and generating a personalised performance report.
                 </p>
               </div>
-              {/* Animated dots */}
-              <div className="flex gap-1.5">
-                {[0, 1, 2, 3].map((i) => (
-                  <span
-                    key={i}
-                    className="size-2 rounded-full bg-primary-blue/40 animate-bounce"
-                    style={{ animationDelay: `${i * 0.15}s` }}
-                  />
-                ))}
-              </div>
             </div>
           ) : feedback ? (
             <>
@@ -179,9 +147,9 @@ const FeedbackModal = ({
                   {/* Progress bar */}
                   <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
                     <div
-                      className="h-full rounded-full transition-all duration-1000 ease-out"
+                      className="h-full rounded-full "
                       style={{
-                        width: showBars ? `${feedback.totalScore}%` : "0%",
+                        width: `${feedback.totalScore}%`,
                         background: feedback.totalScore >= 75
                           ? "linear-gradient(90deg,#22C55E,#16a34a)"
                           : feedback.totalScore >= 50
@@ -236,11 +204,11 @@ const FeedbackModal = ({
                           </div>
                           <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
                             <div
-                              className={cn("h-full rounded-full transition-all duration-1000 ease-out", barColor)}
-                              style={{ width: showBars ? `${cat.score}%` : "0%" }}
+                              className={cn("h-full rounded-full ", barColor)}
+                              style={{ width: `${cat.score}%` }}
                             />
                           </div>
-                          <p className="text-[11px] text-soft-gray leading-relaxed">{cat.comment}</p>
+                          <p className="text-sm text-soft-gray leading-relaxed">{cat.comment}</p>
                         </div>
                       );
                     })}

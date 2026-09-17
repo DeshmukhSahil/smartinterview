@@ -86,20 +86,20 @@ const InterviewCard = ({
   const CtaIcon = cta.icon;
 
   return (
-    <article className="card flex flex-col gap-4 hover:shadow-md hover:border-primary-blue/30 transition-all h-full">
+    <article className="hire-card hire-interview-card flex flex-col gap-6 h-full">
       <div className="flex items-start justify-between gap-3">
         <div className="size-11 rounded-full bg-primary-blue/10 border border-primary-blue/15 flex items-center justify-center shrink-0">
           <Icon size={19} className="text-primary-blue" />
         </div>
-        <span className={cn("text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border shrink-0", loading ? "bg-gray-50 border-border-gray text-soft-gray" : badge.className)}>
+        <span className={cn("text-xs font-medium px-2.5 py-1 rounded border shrink-0", loading ? "bg-gray-50 border-border-gray text-soft-gray" : badge.className)}>
           {loading ? "Checking…" : badge.label}
         </span>
       </div>
 
       <div className="flex-1 space-y-1.5">
-        <p className="text-[11px] font-semibold text-soft-gray uppercase tracking-wide">{meta}</p>
-        <h3 className="text-base font-bold text-dark-100 leading-snug">{role}</h3>
-        <p className="text-xs text-soft-gray leading-relaxed line-clamp-2">
+        <p className="text-sm font-semibold text-soft-gray uppercase tracking-wide">{meta}</p>
+        <h3 className="text-xl font-medium text-dark-100 leading-snug">{role}</h3>
+        <p className="text-sm text-soft-gray leading-relaxed line-clamp-2">
           {feedback
             ? feedback.finalAssessment || "Your interview feedback is ready."
             : isOneOnOne
@@ -111,7 +111,7 @@ const InterviewCard = ({
       {techstack?.length > 0 && (
         <div className="flex items-center gap-2">
           <DisplayTechIcons techStack={techstack} />
-          <span className="text-[10px] text-soft-gray truncate">{techstack.join(" · ")}</span>
+          <span className="text-xs text-soft-gray truncate">{techstack.join(" · ")}</span>
         </div>
       )}
 
@@ -120,7 +120,7 @@ const InterviewCard = ({
         <Link
           href={cta.href}
           className={cn(
-            "btn-primary inline-flex items-center gap-1.5 text-xs !px-4 !py-2.5",
+            "hire-button inline-flex items-center gap-2",
             !feedback && !isOneOnOne && "ml-auto"
           )}
         >

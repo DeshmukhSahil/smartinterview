@@ -294,7 +294,7 @@ export default function InterviewRoom(p: Props) {
     </div>
   );
   return (
-    <div className={styles.room} ref={room} data-interview-room>
+    <div className={styles.room} ref={room} data-interview-room data-candidate-portal>
       <header className={styles.header} data-room-header>
         <a
           href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/`}

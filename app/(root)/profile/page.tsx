@@ -1,159 +1,268 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Check, LogOut, UserRound } from "lucide-react";
-import s from "@/components/CandidateDashboard.module.css";
+import Link from "next/link";
+import { ArrowRight, Check, Info, Mail, ShieldCheck } from "lucide-react";
+import CandidatePageFooter from "@/components/CandidatePageFooter";
+import s from "@/components/CandidateJourney.module.css";
 
+const empty = { phone: "", location: "", availability: "" };
 export default function ProfilePage() {
-  const router = useRouter();
   const [identity, setIdentity] = useState({ name: "", email: "" });
-  const [form, setForm] = useState({
-    phone: "",
-    location: "",
-    availability: "",
-  });
+  const [form, setForm] = useState(empty);
+  const [saved, setSaved] = useState(empty);
+  const [ready, setReady] = useState(false);
   const [message, setMessage] = useState("");
+  const [saveError, setSaveError] = useState(false);
+  const dirty = JSON.stringify(form) !== JSON.stringify(saved);
   useEffect(() => {
-    const email = (localStorage.getItem("candidate_email") || "")
-      .trim()
-      .toLowerCase();
-    setIdentity({ name: localStorage.getItem("candidate_name") || "", email });
     try {
-      const saved = JSON.parse(
-        localStorage.getItem(`chirayu_profile:${email}`) || "{}",
-      );
-      setForm({
-        phone: typeof saved.phone === "string" ? saved.phone : "",
-        location: typeof saved.location === "string" ? saved.location : "",
-        availability:
-          typeof saved.availability === "string" ? saved.availability : "",
+      const email = (localStorage.getItem("candidate_email") || "")
+        .trim()
+        .toLowerCase();
+      setIdentity({
+        name: localStorage.getItem("candidate_name") || "",
+        email,
       });
+      const stored =
+        JSON.parse(localStorage.getItem(`chirayu_profile:${email}`) || "{}") ||
+        {};
+      const preferences = {
+        phone: typeof stored.phone === "string" ? stored.phone : "",
+        location: typeof stored.location === "string" ? stored.location : "",
+        availability:
+          typeof stored.availability === "string" ? stored.availability : "",
+      };
+      setForm(preferences);
+      setSaved(preferences);
     } catch {
-      /* Empty preferences remain editable. */
+      setMessage(
+        "Saved notes couldn’t be read. You can enter them again below.",
+      );
+      setSaveError(true);
+    } finally {
+      setReady(true);
     }
   }, []);
-  const save = (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
+  const update = (key: keyof typeof empty, value: string) => {
+    setForm((previous) => ({ ...previous, [key]: value }));
+    setMessage("");
+    setSaveError(false);
+  };
+  const save = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!identity.email) return;
     try {
-      const clean = Object.fromEntries(
-        Object.entries(form).map(([key, value]) => [key, value.trim()]),
-      );
+      const clean = {
+        phone: form.phone.trim(),
+        location: form.location.trim(),
+        availability: form.availability.trim(),
+      };
       localStorage.setItem(
         `chirayu_profile:${identity.email}`,
         JSON.stringify(clean),
       );
-      setForm(clean as typeof form);
-      setMessage("Preferences saved in this browser.");
+      setForm(clean);
+      setSaved(clean);
+      setSaveError(false);
+      setMessage("Your notes are saved in this browser.");
     } catch {
+      setSaveError(true);
       setMessage(
-        "Your browser couldn’t save these preferences. Please check its storage settings.",
+        "We couldn’t save your notes. Your entries are still here. Check your browser storage settings and try again.",
       );
     }
   };
-  const logout = () => {
-    ["candidate_email", "candidate_name", "password_id"].forEach((k) =>
-      localStorage.removeItem(k),
-    );
-    router.replace("/login");
-  };
   return (
-    <div className={s.dashboard} style={{ maxWidth: 1000 }}>
-      <div className={s.heading}>
-        <div>
-          <p className={s.eyebrow}>YOUR DETAILS</p>
-          <h1>
-            Your profile<span>.</span>
-          </h1>
-          <p>
-            Review your invitation identity and keep your preferences ready.
-          </p>
-        </div>
-      </div>
-      <div className={s.columns}>
-        <section className={s.panel}>
-          <div className={s.panelHeader}>
-            <h2>Contact & preferences</h2>
-            <UserRound size={20} />
-          </div>
-          <form onSubmit={save} className="space-y-5">
-            <div className="grid sm:grid-cols-2 gap-5">
-              {[
-                { label: "Full name", value: identity.name },
-                { label: "Invitation email", value: identity.email },
-              ].map((field) => (
-                <div key={field.label}>
-                  <span className="block text-xs text-slate-500 mb-2">
-                    {field.label}
-                  </span>
-                  <p className="text-sm font-medium break-all">
-                    {field.value || "Not provided"}
-                  </p>
-                </div>
-              ))}
+    <div className={`${s.page} hire-page-enter`}>
+      <header className={s.pageHeading}>
+        <p className="hire-eyebrow">A little about you</p>
+        <h1>Your profile.</h1>
+        <p>
+          Your invitation details and a place to keep your preferences handy.
+        </p>
+      </header>
+      <div className={s.profileGrid}>
+        <div className={s.mainColumn}>
+          <section className={s.identity} aria-labelledby="identity-title">
+            <div className={s.identityHeader}>
+              <span className={s.largeAvatar} aria-hidden="true">
+                {identity.name
+                  .trim()
+                  .split(/\s+/)
+                  .slice(0, 2)
+                  .map((n) => n[0])
+                  .join("") || "—"}
+              </span>
+              <div>
+                <p className="hire-eyebrow">Your invitation</p>
+                <h2 id="identity-title">
+                  {identity.name || "Your candidate details"}
+                </h2>
+              </div>
+              <ShieldCheck
+                size={23}
+                aria-label="Invitation details managed by your recruitment team"
+              />
             </div>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Your recruitment team manages invitation details. The preferences
-              below are stored only in this browser and are not sent to HR.
+            <dl className={s.identityDetails}>
+              <div>
+                <dt>Full name</dt>
+                <dd>{identity.name || "Not provided"}</dd>
+              </div>
+              <div>
+                <dt>Invitation email</dt>
+                <dd>{identity.email || "Not provided"}</dd>
+              </div>
+            </dl>
+            <p className={s.identityFootnote}>
+              <Mail size={16} />
+              These details come from your invitation. Contact your recruiter if
+              something needs correcting.
             </p>
-            {(
-              [
-                {
-                  key: "phone",
-                  label: "Phone number",
-                  placeholder: "Include your country code",
-                },
-                {
-                  key: "location",
-                  label: "Preferred work location",
-                  placeholder: "City or location preference",
-                },
-                {
-                  key: "availability",
-                  label: "Interview availability",
-                  placeholder: "Days, time window and timezone",
-                },
-              ] as const
-            ).map((field) => (
-              <label
-                className="block text-xs font-medium text-slate-700"
-                key={field.key}
-              >
-                {field.label}
-                <input
-                  type={field.key === "phone" ? "tel" : "text"}
-                  maxLength={field.key === "availability" ? 300 : 100}
-                  value={form[field.key]}
-                  onChange={(e) => {
-                    setForm({ ...form, [field.key]: e.target.value });
-                    setMessage("");
-                  }}
-                  placeholder={field.placeholder}
-                  className="block mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-200"
+          </section>
+          <section
+            className={s.preferences}
+            aria-labelledby="preferences-title"
+          >
+            <div className={s.sectionTop}>
+              <h2 id="preferences-title">Your personal notes</h2>
+              <span className={s.optional}>Optional</span>
+            </div>
+            <p>Keep a few details ready for your next conversation.</p>
+            <div className={s.storageNotice}>
+              <Info size={18} />
+              <p>
+                Saved on this browser only. These notes aren’t sent to your
+                recruiter and won’t change your interview schedule.
+              </p>
+            </div>
+            <form onSubmit={save}>
+              <div className={s.formColumns}>
+                <label htmlFor="candidate-phone">
+                  Phone number
+                  <input
+                    id="candidate-phone"
+                    type="tel"
+                    autoComplete="tel"
+                    maxLength={100}
+                    placeholder="+91"
+                    value={form.phone}
+                    onChange={(e) => update("phone", e.target.value)}
+                    disabled={!ready}
+                  />
+                </label>
+                <label htmlFor="candidate-location">
+                  Preferred work location
+                  <input
+                    id="candidate-location"
+                    autoComplete="address-level2"
+                    maxLength={100}
+                    placeholder="City or region"
+                    value={form.location}
+                    onChange={(e) => update("location", e.target.value)}
+                    disabled={!ready}
+                  />
+                </label>
+              </div>
+              <label htmlFor="candidate-availability">
+                Interview availability
+                <textarea
+                  id="candidate-availability"
+                  rows={3}
+                  maxLength={300}
+                  placeholder="e.g. Weekdays, 10 AM–1 PM IST"
+                  value={form.availability}
+                  onChange={(e) => update("availability", e.target.value)}
+                  aria-describedby="availability-hint"
+                  disabled={!ready}
                 />
               </label>
-            ))}
-            <button className={s.primary} type="submit">
-              Save preferences <Check size={16} />
-            </button>
-            <p role="status" className="text-xs text-slate-600">
-              {message}
-            </p>
-          </form>
-        </section>
-        <aside className={s.rail}>
-          <section className={`${s.panel} ${s.prepare}`}>
-            <h2>Your candidate access</h2>
-            <p>
-              Your invitation connects you to both AI and one-on-one interviews.
-              Use the dashboard to find your next conversation and saved
-              assessments.
-            </p>
-            <button className={s.secondary} onClick={logout}>
-              <LogOut size={15} /> Sign out
-            </button>
+              <p id="availability-hint" className={s.fieldHint}>
+                Include your timezone. Share this with your recruiter when
+                arranging a time.
+              </p>
+              <div className={s.saveBar}>
+                <button
+                  className="hire-button"
+                  type="submit"
+                  disabled={!ready || !identity.email || !dirty}
+                >
+                  Save notes <Check size={17} />
+                </button>
+                {dirty && (
+                  <button
+                    className={s.textLink}
+                    type="button"
+                    onClick={() => {
+                      setForm(saved);
+                      setMessage("");
+                      setSaveError(false);
+                    }}
+                  >
+                    Discard changes
+                  </button>
+                )}
+                <span>
+                  {!ready
+                    ? "Loading your notes…"
+                    : dirty
+                      ? "You have unsaved changes"
+                      : "Up to date on this browser"}
+                </span>
+              </div>
+              {message && (
+                <p
+                  role={saveError ? "alert" : "status"}
+                  className={s.saveMessage}
+                  data-error={saveError}
+                >
+                  {!saveError && <Check size={17} />} {message}
+                </p>
+              )}
+            </form>
           </section>
+        </div>
+        <aside className={s.aside}>
+          <section className={s.profileNote}>
+            <p className="hire-eyebrow">Your details, explained</p>
+            <h2>
+              Clarity at
+              <br />
+              <em>every step.</em>
+            </h2>
+            <p>
+              Your invitation connects you to your interviews. Your personal
+              notes are simply here to help you prepare.
+            </p>
+            <div>
+              <h3>Need to change a time?</h3>
+              <p>
+                Contact the recruiter in your invitation email. Updating these
+                notes doesn’t notify the team.
+              </p>
+            </div>
+            <div>
+              <h3>Using another device?</h3>
+              <p>
+                Your interviews will be available after signing in. These notes
+                stay in this browser.
+              </p>
+            </div>
+          </section>
+          <Link href="/allinterviews" className={s.asideAction}>
+            Back to your interviews <ArrowRight size={17} />
+          </Link>
         </aside>
       </div>
+      <CandidatePageFooter />
     </div>
   );
 }

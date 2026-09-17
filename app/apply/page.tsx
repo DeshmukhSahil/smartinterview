@@ -1,18 +1,86 @@
 "use client";
 import { useEffect, useRef, useState, useMemo } from "react";
+import {
+  Search,
+  MapPin,
+  Briefcase,
+  TrendingUp,
+  Wrench,
+  Store,
+  HardHat,
+  Calculator,
+  Database,
+  GraduationCap,
+  Headset,
+  Laptop,
+  Code2,
+  Grid3x3,
+  Landmark,
+  ArrowLeft,
+  Building2,
+  Clock3,
+  Wallet,
+  Building,
+  Factory,
+  Warehouse,
+  Castle,
+} from "lucide-react";
 import type { Campaign } from "@/lib/hiring/schema";
 import Navbar from "@/components/Navbar";
 import "./hiring.css";
 import { solarFonts } from "./SolarIntro";
 import "./solar-grid.css";
-import BlockPlayground from "./BlockPlayground";
-import "./block-playground.css";
 import "./apply-minimal.css";
+import "./job-hero.css";
+import "./job-detail.css";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
-type PublicCampaign = Pick<Campaign, "role" | "locations" | "description" | "min_years" | "max_years" | "fields"> & { id: string };
-type Assessment = { fit: string; reason: string; evidence: string[]; gaps: string[] };
+type PublicCampaign = Pick<
+  Campaign,
+  | "role"
+  | "locations"
+  | "description"
+  | "min_years"
+  | "max_years"
+  | "fields"
+  | "workplace_type"
+  | "employment_type"
+  | "experience_level"
+  | "salary_range"
+  | "skills"
+  | "responsibilities"
+  | "qualifications"
+  | "benefits"
+  | "job_code"
+> & { id: string };
+
+// Best-effort icon per role title, purely decorative -- keyword match against
+// the role name, falling back to a generic briefcase.
+const ROLE_ICONS: [RegExp, typeof Briefcase][] = [
+  [/sales|marketing|business development|bdm/i, TrendingUp],
+  [/mechanic|technician|maintenance/i, Wrench],
+  [/retail|store/i, Store],
+  [/engineer|site|project|installation/i, HardHat],
+  [/account|finance/i, Calculator],
+  [/data entry|back office/i, Database],
+  [/management trainee|graduate|intern/i, GraduationCap],
+  [/bpo|customer|support/i, Headset],
+  [/it hardware|it software|developer|software/i, Code2],
+  [/it |tech/i, Laptop],
+];
+function roleIcon(role: string) {
+  return ROLE_ICONS.find(([pattern]) => pattern.test(role))?.[1] || Briefcase;
+}
+
+// Purely decorative variety for the city tiles -- deterministic per city name
+// (not random) so the same city always gets the same icon across renders.
+const CITY_ICONS = [Landmark, Building2, Factory, Warehouse, Building, Castle];
+function cityIcon(city: string) {
+  let hash = 0;
+  for (let i = 0; i < city.length; i++) hash = (hash * 31 + city.charCodeAt(i)) >>> 0;
+  return CITY_ICONS[hash % CITY_ICONS.length];
+}
 
 interface SearchableSelectProps {
   options: string[];
@@ -23,6 +91,7 @@ interface SearchableSelectProps {
   disabled?: boolean;
   onBlur?: () => void;
   id?: string;
+  ariaLabel?: string;
 }
 
 function SearchableSelect({
@@ -34,6 +103,7 @@ function SearchableSelect({
   disabled = false,
   onBlur,
   id,
+  ariaLabel,
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -115,6 +185,7 @@ function SearchableSelect({
         disabled={disabled}
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-label={ariaLabel}
         className={`searchable-select-trigger ${!value ? "is-placeholder" : ""} ${open ? "is-open" : ""} ${className}`}
         onClick={e => {
           e.preventDefault();
@@ -196,20 +267,45 @@ function SearchableSelect({
 
 export default function HiringApplication() {
   const [campaigns, setCampaigns] = useState<PublicCampaign[]>([]);
+  const [roleQuery, setRoleQuery] = useState("");
+  const [cityFilter, setCityFilter] = useState("");
+  const [showAllRoles, setShowAllRoles] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState("");
+  const [viewStage, setViewStage] = useState<"detail" | "form">("detail");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [candidate, setCandidate] = useState({ name: "", email: "", phone: "", location: "", years: "", consent: false });
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
-  const [assessment, setAssessment] = useState<Assessment | null>(null);
-  const [token, setToken] = useState("");
+  const [hasResume, setHasResume] = useState(false);
   const [receipt, setReceipt] = useState<{ reference: string; email_status: string } | null>(null);
   const form = useRef<HTMLFormElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const c = campaigns.find(c => c.id === selected);
+  const allCities = useMemo(
+    () => [...new Set(campaigns.flatMap(role => role.locations))].sort(),
+    [campaigns]
+  );
+  const visibleCampaigns = useMemo(() => {
+    const q = roleQuery.trim().toLowerCase();
+    return campaigns.filter(role => {
+      const matchesQuery = !q || role.role.toLowerCase().includes(q) || role.locations.some(l => l.toLowerCase().includes(q));
+      const matchesCity = !cityFilter || role.locations.includes(cityFilter);
+      return matchesQuery && matchesCity;
+    });
+  }, [campaigns, roleQuery, cityFilter]);
+  const shownCampaigns = showAllRoles ? visibleCampaigns : visibleCampaigns.slice(0, 11);
+  const totalActiveJobs = campaigns.length;
+  const yearsLabel = (role: Pick<PublicCampaign, "min_years" | "max_years">) =>
+    `${role.min_years}${role.max_years !== null ? ` - ${role.max_years}` : "+"} years`;
+  const locationLabel = (role: Pick<PublicCampaign, "locations">) =>
+    role.locations.length === 1 ? role.locations[0] : `${role.locations.length} locations`;
+
+  useEffect(() => {
+    if (selected) window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [selected, viewStage]);
 
   useEffect(() => {
     fetch(`${BASE_PATH}/api/hiring`, { cache: "no-store" }).then(async r => {
@@ -219,10 +315,7 @@ export default function HiringApplication() {
   }, []);
 
   function invalidate() {
-    setToken("");
-    setAssessment(null);
     setError("");
-    if (fileInput.current) fileInput.current.value = "";
   }
 
   const markTouched = (fieldKey: string) => {
@@ -344,39 +437,17 @@ export default function HiringApplication() {
     setTouched(all);
   }
 
-  async function upload(file?: File) {
-    if (!file || !c) return;
-    markAllTouched();
-
-    if (hasFormErrors) {
-      setError("Please fix the highlighted fields in red before uploading your resume.");
-      if (fileInput.current) fileInput.current.value = "";
-      return;
-    }
-
-    setBusy(true);
-    setError("");
-    setToken("");
-    setAssessment(null);
-    try {
-      const body = new FormData();
-      body.append("candidate", JSON.stringify({ ...candidate, years: Number(candidate.years), campaign_id: c.id, answers }));
-      body.append("resume", file);
-      const r = await fetch(`${BASE_PATH}/api/hiring/screen`, { method: "POST", body });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error);
-      setAssessment(data.assessment);
-      setToken(data.token);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Screening failed. Please try again.");
-      if (fileInput.current) fileInput.current.value = "";
-    } finally {
-      setBusy(false);
-    }
-  }
-
+  // Screening and submission happen together, both only once the candidate
+  // presses "Submit application" -- the resume is attached but never sent
+  // (and never scanned) before that. The candidate never sees the AI fit
+  // assessment; it's stored for HR review only (screen/route.ts).
   async function submit() {
     markAllTouched();
+    const file = fileInput.current?.files?.[0];
+    if (!c || !file) {
+      setError("Please attach your resume before submitting.");
+      return;
+    }
     if (hasFormErrors) {
       setError("Please ensure all fields are valid before submitting.");
       return;
@@ -384,10 +455,16 @@ export default function HiringApplication() {
     setBusy(true);
     setError("");
     try {
+      const body = new FormData();
+      body.append("candidate", JSON.stringify({ ...candidate, years: Number(candidate.years), campaign_id: c.id, answers }));
+      body.append("resume", file);
+      const screened = await fetch(`${BASE_PATH}/api/hiring/screen`, { method: "POST", body });
+      const screenData = await screened.json();
+      if (!screened.ok) throw new Error(screenData.error);
       const r = await fetch(`${BASE_PATH}/api/hiring/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token }),
+        body: JSON.stringify({ token: screenData.token }),
       });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error);
@@ -403,10 +480,6 @@ export default function HiringApplication() {
     <>
       <Navbar />
       <main className={`hiring-page solar-hiring ${solarFonts}`}>
-        
-        <BlockPlayground />
-        
-
       {receipt ? (
         <section className="hiring-panel" aria-live="polite">
           <span className="hiring-eyebrow">APPLICATION RECEIVED</span>
@@ -422,11 +495,81 @@ export default function HiringApplication() {
         </section>
       ) : (
         <>
-          <div className="opportunities-heading" id="opportunities"><div><h1>Open roles</h1></div><span aria-live="polite">{loading ? "LOADING ROLES" : `${campaigns.length} OPEN ${campaigns.length === 1 ? "ROLE" : "ROLES"}`}</span></div>
+          {!c && (
+            <section className="job-hero" id="opportunities">
+              <div className="job-hero-grid">
+                <div className="job-hero-text">
+                  <h1>Find your next role at Chirayu Power</h1>
+                  <p>
+                    {loading ? "Loading open roles…" : (
+                      <><strong>{totalActiveJobs}+</strong> active {totalActiveJobs === 1 ? "role" : "roles"} to grab</>
+                    )}
+                  </p>
+                  <div className="job-hero-search">
+                    <div className="job-hero-field">
+                      <Search size={18} aria-hidden="true" />
+                      <input
+                        type="search"
+                        value={roleQuery}
+                        onChange={e => setRoleQuery(e.target.value)}
+                        placeholder="Search Job Title, Role"
+                        aria-label="Search job title or role"
+                      />
+                    </div>
+                    <div className="job-hero-divider" aria-hidden="true" />
+                    <div className="job-hero-field job-hero-city">
+                      <MapPin size={18} aria-hidden="true" />
+                      <SearchableSelect
+                        options={allCities}
+                        value={cityFilter}
+                        onChange={setCityFilter}
+                        placeholder="Select City"
+                        ariaLabel="Select city"
+                        className="job-hero-city-select"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="job-hero-search-btn"
+                      onClick={() => document.getElementById("role-tiles")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                    >
+                      SEARCH
+                    </button>
+                  </div>
+                </div>
+                <div className="job-hero-image">
+                  <img
+                    src={`${BASE_PATH}/brand/hero-hiring-illustration.webp`}
+                    alt=""
+                    aria-hidden="true"
+                    width={514}
+                    height={356}
+                  />
+                </div>
+              </div>
+            </section>
+          )}
+
           <nav className="hiring-steps" aria-label="Application progress">
-            <span className={!c ? "current" : ""}>01 · Select role</span>
-            <span className={c && !assessment ? "current" : ""}>02 · Your application</span>
-            <span className={assessment ? "current" : ""}>03 · Review & submit</span>
+            <button type="button" className={!c ? "current" : ""} onClick={() => setSelected("")}>
+              01 · Select role
+            </button>
+            <button
+              type="button"
+              className={c && viewStage === "detail" ? "current" : ""}
+              disabled={!c}
+              onClick={() => setViewStage("detail")}
+            >
+              02 · Job details
+            </button>
+            <button
+              type="button"
+              className={c && viewStage === "form" ? "current" : ""}
+              disabled={!c}
+              onClick={() => setViewStage("form")}
+            >
+              03 · Your application
+            </button>
           </nav>
 
           {loading && <p role="status">Loading opportunities…</p>}
@@ -434,43 +577,188 @@ export default function HiringApplication() {
             <section className="hiring-panel">There are no open campaigns right now. Please check back soon.</section>
           )}
 
-          <div className="hiring-role-grid">
-            {campaigns.map(role => (
-              <button
-                type="button"
-                disabled={busy}
-                aria-pressed={selected === role.id}
-                key={role.id}
-                onClick={() => {
-                  setSelected(role.id);
-                  setCandidate(v => ({ ...v, location: role.locations.length === 1 ? role.locations[0] : "" }));
-                  setAnswers({});
-                  setTouched({});
-                  invalidate();
-                }}
-                className={`hiring-role ${selected === role.id ? "selected" : ""}`}
-              >
-                <span className="hiring-role-icon">↗</span>
-                <h2>{role.role}</h2>
-                <p>{role.min_years}{role.max_years !== null ? `–${role.max_years}` : "+"} years experience</p>
-                <span className="solar-role-location">{role.locations.length === 1 ? role.locations[0] : `${role.locations.length} locations`} · Solar EPC</span>
-                <span className="solar-role-action">{selected === role.id ? "Selected ✓" : "Explore role ↗"}</span>
-              </button>
-            ))}
-          </div>
+          {!c && !loading && campaigns.length > 0 && (
+            <section className="role-tiles-panel" id="role-tiles">
+              <div className="role-tiles-tabs">
+                <span className="current">Top Job Roles</span>
+              </div>
 
-          {c && (
-            <section className="hiring-panel">
+              {!visibleCampaigns.length && (
+                <p role="status">No open roles match your search.</p>
+              )}
+
+              <div className="role-tiles-grid">
+                {shownCampaigns.map(role => {
+                  const Icon = roleIcon(role.role);
+                  return (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      aria-pressed={selected === role.id}
+                      key={role.id}
+                      onClick={() => {
+                        setSelected(role.id);
+                        setViewStage("detail");
+                        setCandidate(v => ({ ...v, location: role.locations.length === 1 ? role.locations[0] : "" }));
+                        setAnswers({});
+                        setTouched({});
+                        invalidate();
+                      }}
+                      className={`role-tile ${selected === role.id ? "selected" : ""}`}
+                    >
+                      <span className="role-tile-icon"><Icon size={26} /></span>
+                      <strong>{role.role}</strong>
+                      <span className="role-tile-count">
+                        {role.locations.length === 1 ? role.locations[0] : `${role.locations.length} locations`}
+                      </span>
+                    </button>
+                  );
+                })}
+                {!showAllRoles && visibleCampaigns.length > shownCampaigns.length && (
+                  <button
+                    type="button"
+                    className="role-tile role-tile-viewall"
+                    onClick={() => setShowAllRoles(true)}
+                  >
+                    <span className="role-tile-icon"><Grid3x3 size={26} /></span>
+                    <strong>View All</strong>
+                  </button>
+                )}
+              </div>
+            </section>
+          )}
+
+          {!c && !loading && allCities.length > 0 && (
+            <section className="city-bar-panel">
+              <h2>Browse roles by city</h2>
+              <div className="city-bar">
+                {allCities.map(city => {
+                  const Icon = cityIcon(city);
+                  return (
+                    <button
+                      type="button"
+                      key={city}
+                      className={`city-tile ${cityFilter === city ? "selected" : ""}`}
+                      aria-pressed={cityFilter === city}
+                      onClick={() => {
+                        setCityFilter(prev => (prev === city ? "" : city));
+                        document.getElementById("role-tiles")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                      }}
+                    >
+                      <span className="city-tile-icon"><Icon size={24} /></span>
+                      <span>{city}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {c && viewStage === "detail" && (
+            <section className="job-detail" id="job-detail">
+              <div className="job-detail-header">
+                <div className="job-detail-title-row">
+                  <span className="job-detail-icon">{(() => { const Icon = roleIcon(c.role); return <Icon size={26} />; })()}</span>
+                  <div>
+                    <div className="job-detail-title-line">
+                      <h1>{c.role}</h1>
+                      <span className="job-detail-jobid">Job ID: {c.job_code || c.id.slice(0, 8).toUpperCase()}</span>
+                    </div>
+                    <div className="job-detail-meta">
+                      <span><Building2 size={14} aria-hidden="true" /> {c.workplace_type}</span>
+                      <span className="job-detail-dot" aria-hidden="true" />
+                      <span><MapPin size={14} aria-hidden="true" /> {locationLabel(c)}</span>
+                      <span className="job-detail-dot" aria-hidden="true" />
+                      <span><Briefcase size={14} aria-hidden="true" /> {yearsLabel(c)}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="job-detail-actions">
+                  <button type="button" className="job-detail-back" onClick={() => setSelected("")}>
+                    <ArrowLeft size={15} aria-hidden="true" /> See all jobs
+                  </button>
+                  <button type="button" className="job-detail-apply" onClick={() => setViewStage("form")}>
+                    Apply
+                  </button>
+                </div>
+              </div>
+
+              <div className="job-detail-body">
+                <div className="job-detail-main">
+                  <p className="job-detail-description">{c.description}</p>
+
+                  {c.responsibilities.length > 0 && (
+                    <>
+                      <h3>Key Responsibilities</h3>
+                      <ul>{c.responsibilities.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                    </>
+                  )}
+
+                  {c.qualifications.length > 0 && (
+                    <>
+                      <h3>Qualifications</h3>
+                      <ul>{c.qualifications.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                    </>
+                  )}
+
+                  {c.benefits.length > 0 && (
+                    <>
+                      <h3>Benefits</h3>
+                      <ul>{c.benefits.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                    </>
+                  )}
+                </div>
+
+                <aside className="job-detail-sidebar">
+                  <div className="job-detail-sidebar-item">
+                    <h4>Workplace Type</h4>
+                    <p>{c.workplace_type}</p>
+                  </div>
+                  <div className="job-detail-sidebar-item">
+                    <h4>Employment Type</h4>
+                    <p>{c.employment_type}</p>
+                  </div>
+                  <div className="job-detail-sidebar-item">
+                    <h4>Experience Level</h4>
+                    <p>{c.experience_level}</p>
+                  </div>
+                  {c.salary_range && (
+                    <div className="job-detail-sidebar-item">
+                      <h4>Annual Compensation</h4>
+                      <p>{c.salary_range}</p>
+                    </div>
+                  )}
+                  <div className="job-detail-sidebar-item">
+                    <h4>Work Experience (years)</h4>
+                    <p>{yearsLabel(c)}</p>
+                  </div>
+                  {c.skills.length > 0 && (
+                    <div className="job-detail-sidebar-item">
+                      <h4>Skills</h4>
+                      <div className="job-detail-skills">
+                        {c.skills.map(skill => <span key={skill}>{skill}</span>)}
+                      </div>
+                    </div>
+                  )}
+                </aside>
+              </div>
+            </section>
+          )}
+
+          {c && viewStage === "form" && (
+            <section className="hiring-panel" id="apply-form">
               <div className="hiring-panel-title">
                 <div>
+                  <button type="button" className="job-detail-backlink" onClick={() => setViewStage("detail")}>
+                    <ArrowLeft size={13} aria-hidden="true" /> Back to job details
+                  </button>
                   <p className="hiring-eyebrow">YOUR NEXT OPPORTUNITY</p>
                   <h2>{c.role}</h2>
                 </div>
                 <span className="hiring-tag">Solar & renewable energy</span>
               </div>
-              <p className="hiring-description">{c.description}</p>
 
-              <form ref={form} onSubmit={e => { e.preventDefault(); if (token) void submit(); }}>
+              <form ref={form} onSubmit={e => { e.preventDefault(); void submit(); }}>
                 <fieldset disabled={busy}>
                   <div className="hiring-fields">
                     {/* Location - Searchable if > 3 options */}
@@ -716,60 +1004,27 @@ export default function HiringApplication() {
 
                   {/* Resume Upload */}
                   <label className="hiring-upload">
-                    <strong>Upload your resume to check role fit *</strong>
-                    <span>PDF or TXT · up to 4 MB · complete your details first</span>
+                    <strong>Upload your resume *</strong>
+                    <span>PDF or TXT · up to 4 MB</span>
                     <input
                       ref={fileInput}
                       type="file"
                       accept=".pdf,.txt"
-                      onChange={e => void upload(e.target.files?.[0])}
+                      onChange={() => {
+                        setHasResume(!!fileInput.current?.files?.length);
+                        invalidate();
+                      }}
                     />
                   </label>
                 </fieldset>
 
                 {busy && (
                   <p role="status">
-                    {token
-                      ? "Saving your application and preparing your access email…"
-                      : "Reading your resume and checking it against this role’s requirements…"}
+                    Submitting your application and resume…
                   </p>
                 )}
 
-                {assessment && (
-                  <section className={`hiring-assessment ${assessment.fit}`} aria-live="polite">
-                    <h3>
-                      {assessment.fit === "suitable"
-                        ? "Your experience appears suitable"
-                        : assessment.fit === "not_suitable"
-                        ? "This role may not be the right match"
-                        : "Your application needs HR review"}
-                    </h3>
-                    <p>{assessment.reason}</p>
-                    {assessment.evidence.length > 0 && (
-                      <>
-                        <h4>Relevant experience</h4>
-                        <ul>
-                          {assessment.evidence.map((s, i) => (
-                            <li key={i}>{s}</li>
-                          ))}
-                        </ul>
-                      </>
-                    )}
-                    {assessment.gaps.length > 0 && (
-                      <>
-                        <h4>Points to clarify</h4>
-                        <ul>
-                          {assessment.gaps.map((s, i) => (
-                            <li key={i}>{s}</li>
-                          ))}
-                        </ul>
-                      </>
-                    )}
-                    <small>This is an initial assessment. You can submit for HR review regardless of this result.</small>
-                  </section>
-                )}
-
-                <button className="hiring-submit" type="submit" disabled={!token || busy || hasFormErrors}>
+                <button className="hiring-submit" type="submit" disabled={!hasResume || busy || hasFormErrors}>
                   {busy ? "Please wait…" : "Submit application →"}
                 </button>
               </form>

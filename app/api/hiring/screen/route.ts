@@ -1,6 +1,6 @@
 import { PDFParse } from "pdf-parse";
 import { applicantSchema, validateAnswers } from "@/lib/hiring/schema";
-import { activeCampaign, erp, failure, hash, newToken, screen } from "@/lib/hiring/server";
+import { activeCampaign, driveUploadResume, erp, failure, hash, newToken, screen } from "@/lib/hiring/server";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 export async function POST(request: Request) {
@@ -44,6 +44,21 @@ export async function POST(request: Request) {
     const saved = await db.from("hiring_applications").insert({ id, campaign_id: c.id, token_hash: hash(token), candidate: a, campaign_snapshot: c, resume_path: path, resume_text: text, screening: assessment });
     if (saved.error) throw saved.error;
     uploadedPath = null;
+    // Best-effort archive copy in the ERP's Google Drive "Applied Resumes"
+    // folder. Never blocks or fails the application on error -- and the
+    // resume_url column lives in the ERP database (this repo's migrations
+    // only cover the Smart Interview DB), so this write is kept separate
+    // from the insert above in case that column isn't provisioned yet.
+    try {
+      const filename = `${a.name}_${c.role}_Resume.${pdf ? "pdf" : "txt"}`.replace(/[\\/:*?"<>|]/g, "_");
+      const driveUrl = await driveUploadResume({ filename, buffer, mimeType: pdf ? "application/pdf" : "text/plain" });
+      if (driveUrl) {
+        const urlSaved = await db.from("hiring_applications").update({ resume_url: driveUrl }).eq("id", id);
+        if (urlSaved.error) console.error("Could not store resume_url (has the ERP-side migration for this column run?)", urlSaved.error);
+      }
+    } catch (e) {
+      console.error("Google Drive resume archive upload failed", e);
+    }
     return Response.json({ token, assessment }, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
     if (uploadedPath) await erp().storage.from("hiring-resumes").remove([uploadedPath]);

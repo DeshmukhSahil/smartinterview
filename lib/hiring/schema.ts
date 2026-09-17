@@ -22,6 +22,18 @@ export const campaignSchema = z.object({
   company_knowledge: z.string().max(20000),
   system_prompt: z.string().max(20000),
   ai_model: z.string().min(1).max(100),
+  // Rich job-description metadata, candidate-facing on the /apply job detail
+  // page. Defaults mirror the DB column defaults so rows created before this
+  // migration (and admin submissions that omit them) still validate.
+  workplace_type: z.enum(["In-Office", "On-Site", "Hybrid", "Remote"]).default("In-Office"),
+  employment_type: z.enum(["Full-Time", "Part-Time", "Contract", "Internship"]).default("Full-Time"),
+  experience_level: z.string().trim().min(1).max(100).default("Mid-Level"),
+  salary_range: z.string().trim().max(200).default(""),
+  skills: z.array(z.string().trim().min(1).max(100)).max(50).default([]),
+  responsibilities: z.array(z.string().trim().min(1).max(500)).max(50).default([]),
+  qualifications: z.array(z.string().trim().min(1).max(500)).max(50).default([]),
+  benefits: z.array(z.string().trim().min(1).max(300)).max(50).default([]),
+  job_code: z.string().trim().max(100).nullable().default(null),
 }).superRefine((c, ctx) => {
   const fail = (message: string) => ctx.addIssue({ code: "custom", message });
   if (c.active && !c.locations.length) fail("Enter approved locations before publishing");

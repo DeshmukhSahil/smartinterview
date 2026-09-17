@@ -1,14 +1,17 @@
 "use client";
+
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ReactNode, useState, useEffect } from "react";
+import { ReactNode, useState, useEffect, useRef } from "react";
 import {
-  LayoutDashboard,
-  History,
-  User,
-  Menu,
+  ChevronDown,
+  HelpCircle,
+  LogOut,
+  UserRound,
   X,
-  ArrowUpRight,
+  House,
+  CalendarDays,
+  FileText,
   ChevronRight,
 } from "lucide-react";
 import { ChirayuLogo } from "@/components/ui/chirayu-logo";
@@ -19,12 +22,15 @@ export default function Layout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [authenticated, setAuthenticated] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [name, setName] = useState("Candidate");
+  const account = useRef<HTMLDetailsElement>(null);
+  const help = useRef<HTMLDialogElement>(null);
+
   useEffect(() => {
     const email = localStorage.getItem("candidate_email");
     const pass = localStorage.getItem("password_id");
-    setMobileOpen(false);
+    if (account.current) account.current.open = false;
+    help.current?.close();
     if (!email || !pass) {
       setAuthenticated(false);
       if (/^\/interview\/[^/]+$/.test(pathname))
@@ -35,118 +41,212 @@ export default function Layout({ children }: { children: ReactNode }) {
       setAuthenticated(true);
     }
   }, [pathname, router]);
+
+  useEffect(() => {
+    const dismiss = (event: PointerEvent) => {
+      if (account.current && !account.current.contains(event.target as Node))
+        account.current.open = false;
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && account.current?.open) {
+        account.current.open = false;
+        account.current.querySelector("summary")?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", dismiss);
+      document.removeEventListener("keydown", escape);
+    };
+  }, []);
+
+  const signOut = () => {
+    ["candidate_email", "candidate_name", "password_id"].forEach((key) =>
+      localStorage.removeItem(key),
+    );
+    router.replace("/login");
+  };
   const interviewPage =
     /^\/interview\/[^/]+\/?$/.test(pathname) && !pathname.endsWith("/create");
-  const title = interviewPage
-    ? "Interview room"
-    : pathname === "/allinterviews"
-      ? "All interviews"
-      : pathname === "/profile"
-        ? "Your profile"
-        : pathname.includes("feedback")
-          ? "Interview feedback"
-          : "Dashboard";
-  const nav = [
-    { label: "Dashboard", href: "/", icon: LayoutDashboard },
-    { label: "All interviews", href: "/allinterviews", icon: History },
-    { label: "Profile", href: "/profile", icon: User },
-  ];
+
   return (
-    <div className={styles.shell}>
-      {mobileOpen && (
-        <button
-          className={styles.scrim}
-          aria-label="Close navigation"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
-      <aside
-        className={`${styles.sidebar} ${mobileOpen ? styles.open : ""}`}
-        aria-label="Portal sidebar"
-      >
-        <div className={styles.logo}>
-          <Link href="/" aria-label="Chirayu Power home">
-            <ChirayuLogo height={42} />
-          </Link>
-          <button onClick={() => setMobileOpen(false)} aria-label="Close menu">
-            <X size={19} />
-          </button>
-        </div>
-        <p className={styles.sectionLabel}>INTERVIEW PORTAL</p>
-        <nav aria-label="Portal navigation">
-          {nav.map(({ label, href, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              aria-current={pathname === href ? "page" : undefined}
-            >
-              <Icon size={18} />
-              {label}
-            </Link>
-          ))}
-        </nav>
-        <a
-          className={styles.brandStory}
-          href="https://chirayupower.com/about-us/"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <div
-            className={styles.brandPhoto}
-            style={{
-              backgroundImage: `url(${process.env.NEXT_PUBLIC_BASE_PATH || ""}/brand/solar-sidebar.webp)`,
-            }}
-            aria-hidden="true"
-          />
-          <div>
-            <span>THE COMPANY BEHIND YOUR NEXT STEP</span>
-            <strong>Energy with integrity.</strong>
-            <p>
-              Get to know Chirayu Power <ArrowUpRight size={14} />
-            </p>
-          </div>
-        </a>
-        <footer>© {new Date().getFullYear()} Chirayu Power</footer>
-      </aside>
-      <div className={styles.workspace}>
-        <header className={styles.navbar}>
-          <button
-            className={styles.menu}
-            aria-label="Open navigation"
-            aria-expanded={mobileOpen}
-            onClick={() => setMobileOpen(!mobileOpen)}
-          >
-            <Menu size={20} />
-          </button>
-          <div className={styles.mobileLogo}>
-            <ChirayuLogo height={30} />
-          </div>
+    <div className={styles.shell} data-candidate-portal>
+      <a className={styles.skipLink} href="#candidate-content">
+        Skip to content
+      </a>
+      <header className={styles.header}>
+        <div className={styles.headerInner}>
           <div className={styles.breadcrumb}>
-            <span>Chirayu Hire</span>
-            <ChevronRight size={13} />
-            <strong>{title}</strong>
-          </div>
-          <div className={styles.profile}>
-            <span className={styles.avatar}>
-              {name
-                .split(" ")
-                .slice(0, 2)
-                .map((n) => n[0])
-                .join("")}
+            <Link href="/">Home</Link>
+            <ChevronRight size={16} />
+            <span>
+              {pathname === "/"
+                ? "Overview"
+                : pathname === "/profile"
+                  ? "My profile"
+                  : "My interviews"}
             </span>
-            <div>
-              <strong>{name}</strong>
-              <span>Candidate portal</span>
-            </div>
           </div>
-        </header>
-        <main
-          className={`${styles.content} ${interviewPage ? styles.interview : ""}`}
-          aria-busy={!authenticated}
+          <Link
+            href="/"
+            className={styles.brand}
+            aria-label="Chirayu Hire home"
+          >
+            <ChirayuLogo height={34} />
+            <span>Hire</span>
+          </Link>
+          <nav className={styles.navigation} aria-label="Candidate navigation">
+            <Link href="/" aria-current={pathname === "/" ? "page" : undefined}>
+              Home
+            </Link>
+            <Link
+              href="/allinterviews"
+              aria-current={
+                pathname === "/allinterviews" ||
+                pathname.startsWith("/interview/")
+                  ? "page"
+                  : undefined
+              }
+            >
+              Interviews
+            </Link>
+            <Link
+              href="/profile"
+              aria-current={pathname === "/profile" ? "page" : undefined}
+            >
+              Profile
+            </Link>
+          </nav>
+          <button
+            className={styles.helpButton}
+            type="button"
+            aria-label="Help"
+            onClick={() => help.current?.showModal()}
+          >
+            <HelpCircle size={18} />
+          </button>
+          <details ref={account} className={styles.account}>
+            <summary aria-label="Your account">
+              <span className={styles.avatar}>
+                {name
+                  .trim()
+                  .split(/\s+/)
+                  .slice(0, 2)
+                  .map((part) => part[0])
+                  .join("")}
+              </span>
+              <span className={styles.accountName}>{name}</span>
+              <ChevronDown size={16} />
+            </summary>
+            <div className={styles.accountPanel}>
+              <p>{name}</p>
+              <Link href="/profile">
+                <UserRound size={18} />
+                Your profile
+              </Link>
+              <button type="button" onClick={signOut}>
+                <LogOut size={18} />
+                Sign out
+              </button>
+            </div>
+          </details>
+        </div>
+      </header>
+      <aside className={styles.sidebar} aria-label="Candidate sidebar">
+        <Link
+          href="/"
+          className={styles.sidebarBrand}
+          aria-label="Chirayu Hire home"
         >
-          {authenticated ? children : <PortalLoading />}
-        </main>
-      </div>
+          <ChirayuLogo height={42} />
+          <span>Hire</span>
+        </Link>
+        <nav aria-label="Sidebar navigation">
+          <Link href="/" aria-current={pathname === "/" ? "page" : undefined}>
+            <House size={20} />
+            Overview
+          </Link>
+          <Link
+            href="/allinterviews"
+            aria-current={
+              pathname === "/allinterviews" ||
+              pathname.startsWith("/interview/")
+                ? "page"
+                : undefined
+            }
+          >
+            <CalendarDays size={20} />
+            My interviews
+          </Link>
+          <button
+            disabled
+            title="Application tracking is not available in the candidate portal"
+          >
+            <FileText size={20} />
+            Applications<span className={styles.soon}>—</span>
+          </button>
+          <Link
+            href="/profile"
+            aria-current={pathname === "/profile" ? "page" : undefined}
+          >
+            <UserRound size={20} />
+            My profile
+          </Link>
+          <button onClick={() => help.current?.showModal()}>
+            <HelpCircle size={20} />
+            Help
+          </button>
+        </nav>
+        <div
+          className={styles.sidebarStory}
+          role="img"
+          aria-label="Building a brighter tomorrow. People for a cleaner planet."
+          style={{
+            backgroundImage: `url('${process.env.NEXT_PUBLIC_BASE_PATH || ""}/brand/sidebar-story.webp')`,
+          }}
+        />
+      </aside>
+      <main
+        id="candidate-content"
+        tabIndex={-1}
+        className={`${styles.content} ${interviewPage ? styles.interview : ""}`}
+        aria-busy={!authenticated}
+      >
+        {authenticated ? children : <PortalLoading />}
+      </main>
+      <dialog
+        ref={help}
+        className="hire-dialog"
+        aria-labelledby="candidate-help-title"
+        aria-describedby="candidate-help-description"
+      >
+        <button
+          type="button"
+          className="hire-icon-button hire-dialog-close"
+          aria-label="Close help"
+          onClick={() => help.current?.close()}
+        >
+          <X size={20} />
+        </button>
+        <p className="hire-eyebrow">Here to help</p>
+        <h2 id="candidate-help-title">A little guidance.</h2>
+        <p id="candidate-help-description">
+          For an access code, a change of time, or support with your
+          application, contact the recruiter listed in your invitation email.
+        </p>
+        <p>
+          For an AI interview, open your invitation to check your microphone and
+          speakers before starting. Your camera is optional.
+        </p>
+        <button
+          type="button"
+          className="hire-button"
+          onClick={() => help.current?.close()}
+        >
+          Got it
+        </button>
+      </dialog>
     </div>
   );
 }

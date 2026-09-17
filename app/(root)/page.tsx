@@ -1,616 +1,547 @@
 "use client";
-
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
-  ArrowUpRight,
   CalendarDays,
-  Check,
-  Clock3,
-  Mic,
-  Sparkles,
+  FileCheck2,
+  ChartNoAxesColumnIncreasing,
   UserRound,
   Video,
+  FileText,
+  Check,
+  Info,
+  BookOpen,
+  X,
 } from "lucide-react";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { useCandidateJourney } from "@/hooks/use-candidate-journey";
+import {
+  interviewDate,
+  interviewState,
+  nextInvitation,
+  CandidateInvitation,
+} from "@/lib/candidate-journey";
 import PortalLoading from "@/components/PortalLoading";
-import s from "@/components/CandidateDashboard.module.css";
+import s from "@/components/CandidateOverview.module.css";
 
-type Invitation = {
-  id: string;
-  role: string;
-  mode: string;
-  interview_status: string | null;
-  scheduled_at: string | null;
-  created_at: string;
-};
-type Report = {
-  id: string;
-  interview_id: string;
-  created_at: string;
-  analysis: {
-    categoryScores?: { name: string; score: number; comment?: string }[];
-    strengths?: string[];
-    areasForImprovement?: string[];
-    finalAssessment?: string;
-  };
-};
-const date = (value: string | null) =>
-  value && !Number.isNaN(Date.parse(value))
-    ? new Intl.DateTimeFormat("en-IN", {
-        day: "numeric",
-        month: "short",
-        hour: "numeric",
-        minute: "2-digit",
-        timeZoneName: "short",
-      }).format(new Date(value))
-    : "Schedule pending";
+function downloadCalendar(invitation: CandidateInvitation) {
+  if (
+    !invitation.scheduled_at ||
+    !Number.isFinite(Date.parse(invitation.scheduled_at))
+  )
+    return;
+  const stamp = (date: Date) =>
+    date
+      .toISOString()
+      .replace(/[-:]/g, "")
+      .replace(/\.\d{3}Z$/, "Z");
+  const escape = (text: string) =>
+    text
+      .replace(/\\/g, "\\\\")
+      .replace(/\n/g, "\\n")
+      .replace(/[,;]/g, (m) => "\\" + m);
+  const file = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Chirayu Hire//Candidate interview//EN",
+    "BEGIN:VEVENT",
+    "UID:" + invitation.id + "@chirayu-hire",
+    "DTSTAMP:" + stamp(new Date()),
+    "DTSTART:" + stamp(new Date(invitation.scheduled_at)),
+    "SUMMARY:" + escape(invitation.role + " — interview"),
+    "DESCRIPTION:Check your invitation for joining instructions.",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+  const url = URL.createObjectURL(
+    new Blob([file], { type: "text/calendar;charset=utf-8" }),
+  );
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = "chirayu-interview.ics";
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function Home() {
-  const [name, setName] = useState("Candidate");
-  const [email, setEmail] = useState("");
-  const [interviews, setInterviews] = useState<Invitation[]>([]);
-  const [reports, setReports] = useState<Report[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [reportLoading, setReportLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [reportError, setReportError] = useState(false);
-  const [attempt, setAttempt] = useState(0);
-  const [selected, setSelected] = useState("");
-  const [profile, setProfile] = useState<Record<string, string>>({});
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const journey = useCandidateJourney();
+  const { interviews, reports, now, loading, error } = journey;
+  const [profile, setProfile] = useState(0);
+  const assessmentDialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setPrefersReducedMotion(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
-  // Boomerang loop: play the clip forward, then play a pre-rendered reverse
-  // encode of the same clip back to the start, alternating forever -- so the
-  // loop point is a smooth direction change instead of a hard cut back to
-  // frame 0. (<video> doesn't support playbackRate: -1 in practice, so this
-  // is two real files swapped on "ended" rather than true reverse playback.)
-  const heroVideoRef = useRef<HTMLVideoElement>(null);
-  const [heroVideoDirection, setHeroVideoDirection] = useState<"forward" | "reverse">("forward");
-  useEffect(() => {
-    const video = heroVideoRef.current;
-    if (!video || prefersReducedMotion) return;
-    const handleEnded = () => setHeroVideoDirection((d) => (d === "forward" ? "reverse" : "forward"));
-    video.addEventListener("ended", handleEnded);
-    return () => video.removeEventListener("ended", handleEnded);
-  }, [prefersReducedMotion]);
-  useEffect(() => {
-    const video = heroVideoRef.current;
-    if (!video || prefersReducedMotion) return;
-    video.load();
-    void video.play().catch(() => {});
-  }, [heroVideoDirection, prefersReducedMotion]);
-  useEffect(() => {
-    const controller = new AbortController();
-    let disposed = false;
-    const candidateEmail = (localStorage.getItem("candidate_email") || "")
-      .trim()
-      .toLowerCase();
-    setName(localStorage.getItem("candidate_name") || "Candidate");
-    setEmail(candidateEmail);
     try {
+      const email = (localStorage.getItem("candidate_email") || "")
+        .trim()
+        .toLowerCase();
+      const notes =
+        JSON.parse(localStorage.getItem("chirayu_profile:" + email) || "{}") ||
+        {};
+      const fields = [
+        localStorage.getItem("candidate_name"),
+        email,
+        notes.phone,
+        notes.location,
+        notes.availability,
+      ];
       setProfile(
-        JSON.parse(
-          localStorage.getItem(`chirayu_profile:${candidateEmail}`) || "{}",
-        ),
+        fields.filter((v) => typeof v === "string" && v.trim()).length * 20,
       );
     } catch {
-      setProfile({});
+      setProfile(0);
     }
-    setLoading(true);
-    setError("");
-    setReportError(false);
-    setReports([]);
-    const timeout = setTimeout(() => controller.abort(), 10000);
-    void (async () => {
-      try {
-        if (!isSupabaseConfigured)
-          throw new Error("The interview service is not configured yet.");
-        if (!candidateEmail) return;
-        const { data, error: queryError } = await supabase
-          .from("interviews")
-          .select("id,role,mode,interview_status,scheduled_at,created_at")
-          .eq("candidate_email", candidateEmail)
-          .order("created_at", { ascending: false })
-          .abortSignal(controller.signal);
-        if (queryError) throw queryError;
-        if (disposed) return;
-        const rows = (data || []) as Invitation[];
-        setInterviews(rows);
-        setLoading(false);
-        clearTimeout(timeout);
-        if (!rows.length) return;
-        setReportLoading(true);
-        const reportTimer = setTimeout(() => controller.abort(), 8000);
-        try {
-          const { data: feedback, error: feedbackError } = await supabase
-            .from("feedback")
-            .select("id,interview_id,created_at,analysis")
-            .in(
-              "interview_id",
-              rows.map((r) => r.id),
-            )
-            .eq("user_id", "candidate-user")
-            .order("created_at", { ascending: false })
-            .abortSignal(controller.signal);
-          if (feedbackError) throw feedbackError;
-          if (!disposed) {
-            const seen = new Set<string>();
-            const latest = ((feedback || []) as Report[])
-              .map((r) => ({ ...r, analysis: r.analysis || {} }))
-              .filter((r) => {
-                if (seen.has(r.interview_id)) return false;
-                seen.add(r.interview_id);
-                return true;
-              });
-            setReports(latest);
-            setSelected(latest[0]?.interview_id || "");
-          }
-        } catch {
-          if (!disposed) setReportError(true);
-        } finally {
-          clearTimeout(reportTimer);
-          if (!disposed) setReportLoading(false);
-        }
-      } catch {
-        if (!disposed)
-          setError("We couldn’t load your interviews. Please try again.");
-      } finally {
-        clearTimeout(timeout);
-        if (!disposed) setLoading(false);
-      }
-    })();
-    return () => {
-      disposed = true;
-      clearTimeout(timeout);
-      controller.abort();
-    };
-  }, [attempt]);
-  const completed = (i: Invitation) =>
-    i.interview_status === "completed" ||
-    reports.some((r) => r.interview_id === i.id);
-  const scheduled = interviews
-    .filter(
-      (i) =>
-        i.interview_status === "scheduled" &&
-        i.scheduled_at &&
-        Date.parse(i.scheduled_at) > Date.now(),
-    )
-    .sort(
-      (a, b) => Date.parse(a.scheduled_at!) - Date.parse(b.scheduled_at!),
-    )[0];
-  const next =
-    scheduled ||
-    interviews.find(
-      (i) =>
-        !completed(i) &&
-        !["cancelled", "no_show"].includes(i.interview_status || ""),
-    );
-  const report = reports.find((r) => r.interview_id === selected);
-  const reportInterview = interviews.find((i) => i.id === selected);
-  const checks = [
-    { label: "Full name", done: name !== "Candidate" && !!name.trim() },
-    { label: "Email address", done: !!email },
-    { label: "Phone number", done: !!profile.phone },
-    { label: "Preferred location", done: !!profile.location },
-    { label: "Interview availability", done: !!profile.availability },
-  ];
-  const percent = checks.filter((c) => c.done).length * 20;
-  const status = (i: Invitation) =>
-    completed(i)
-      ? "Completed"
-      : i.interview_status === "cancelled"
-        ? "Cancelled"
-        : i.interview_status === "no_show"
-          ? "Not attended"
-          : i.interview_status === "scheduled"
-            ? "Scheduled"
-            : i.mode === "one_on_one"
-              ? "Awaiting schedule"
-              : "Ready to start";
+  }, []);
+  const report = reports[0];
+  const assessed = interviews.find((i) => i.id === report?.interview_id);
+  const next = nextInvitation(interviews, reports, now);
+  const upcoming = interviews.filter(
+    (i) =>
+      interviewState(
+        i,
+        reports.some((r) => r.interview_id === i.id),
+        now,
+      ).group === "upcoming",
+  );
+  const completed = interviews.filter(
+    (i) =>
+      interviewState(
+        i,
+        reports.some((r) => r.interview_id === i.id),
+        now,
+      ).group === "completed",
+  );
+  const categories = report?.analysis.categoryScores || [];
+  const score = report?.analysis.totalScore;
+  const hasScore = typeof score === "number" && Number.isFinite(score);
   return (
-    <div className={s.dashboard}>
-      <section className={s.hero} aria-label="Chirayu Power interview portal">
-        <div className={s.heroPatternWrap}>
-          <video
-            ref={heroVideoRef}
-            className={s.heroPattern}
-            aria-hidden="true"
-            poster={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/brand/hero-animation-fallback.jpg`}
-            autoPlay={!prefersReducedMotion}
-            muted
-            playsInline
-            preload="auto"
-          >
-            <source
-              src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/brand/hero-animation${heroVideoDirection === "reverse" ? "-reverse" : ""}.mp4`}
-              type="video/mp4"
-            />
-          </video>
-        </div>
-        <div className={s.heroTop}>
-          <div className={s.heroTopLead}>
-            <Image
-              src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/assets/chirayu-icon2.png`}
-              alt=""
-              width={44}
-              height={44}
-              className={s.heroSun}
-            />
-            <div>
-              <p className={s.eyebrow}>YOUR CANDIDATE WORKSPACE</p>
-              <h1>
-                Welcome back, {name.split(" ")[0]}
-                <span>.</span>
-              </h1>
-              <p>Your conversations, progress and next steps. All in one place.</p>
+    <div className={s.page + " hire-page-enter"}>
+      <header className={s.heading}>
+        <h1>Your interview overview</h1>
+        <p>
+          Track your progress, prepare well and build your career with Chirayu
+          Hire.
+        </p>
+      </header>
+      {loading ? (
+        <PortalLoading variant="list" />
+      ) : error ? (
+        <section className={s.panel} role="alert">
+          <h2>Your invitations are taking a moment.</h2>
+          <p>{error}</p>
+          <button className="hire-button" onClick={journey.retry}>
+            Retry loading
+          </button>
+        </section>
+      ) : (
+        <>
+          <div className={s.stats}>
+            <div className={s.stat}>
+              <div
+                className={s.ring}
+                style={{ "--completion": profile + "%" } as React.CSSProperties}
+              >
+                <span>{profile}%</span>
+              </div>
+              <div>
+                <h2>Profile {profile}%</h2>
+                <Link href="/profile">
+                  Review your details <ArrowRight size={15} />
+                </Link>
+                <small>Includes browser-only notes</small>
+              </div>
+            </div>
+            <div className={s.stat}>
+              <span className={s.statIcon}>
+                <CalendarDays />
+              </span>
+              <div>
+                <h2>
+                  {upcoming.length} upcoming{" "}
+                  {upcoming.length === 1 ? "interview" : "interviews"}
+                </h2>
+                <p>
+                  {next?.scheduled_at
+                    ? interviewDate(next.scheduled_at)
+                    : next
+                      ? "Your next invitation is ready"
+                      : "No upcoming interviews"}
+                </p>
+              </div>
+            </div>
+            <div className={s.stat}>
+              <span className={s.statIcon}>
+                <FileCheck2 />
+              </span>
+              <div>
+                <h2>
+                  {completed.length} completed{" "}
+                  {completed.length === 1 ? "interview" : "interviews"}
+                </h2>
+                <p>
+                  {completed.length
+                    ? "Your interview history is below"
+                    : "Your journey starts here"}
+                </p>
+              </div>
+            </div>
+            <div className={s.stat}>
+              <span className={s.statIcon}>
+                <ChartNoAxesColumnIncreasing />
+              </span>
+              <div>
+                <h2>{reports.length ? "Feedback ready" : "Feedback"}</h2>
+                <p>
+                  {journey.feedbackLoading
+                    ? "Checking saved assessments…"
+                    : journey.feedbackError
+                      ? "Couldn’t load assessments"
+                      : reports.length +
+                        (reports.length === 1 ? " assessment" : " assessments")}
+                </p>
+              </div>
             </div>
           </div>
-          <Link className={s.textLink} href="/allinterviews">
-            All interviews <ArrowUpRight size={16} />
-          </Link>
-        </div>
-        <div className={s.heroMain}>
-          <div className={s.nextCard}>
-          <span className={s.eyebrow}>
-            {loading
-              ? "YOUR INTERVIEWS"
-              : next
-                ? "YOUR NEXT STEP"
-                : "YOUR WORKSPACE"}
-          </span>
-          <h3>
-            {loading
-              ? "Finding your invitations…"
-              : error
-                ? "Your invitations are unavailable"
-                : next?.role || "Ready for what comes next"}
-          </h3>
-          <p>
-            {next ? (
-              <>
-                {next.mode === "one_on_one" ? (
-                  <Video size={14} />
-                ) : (
-                  <Mic size={14} />
-                )}{" "}
-                {next.mode === "one_on_one"
-                  ? "One-on-one interview"
-                  : "AI interview"}
-              </>
-            ) : (
-              "Your invitations and results will appear here."
-            )}
-          </p>
-          {next?.scheduled_at && (
-            <p>
-              <CalendarDays size={14} />
-              {date(next.scheduled_at)}
+          {journey.feedbackError && (
+            <p className={s.notice} role="status">
+              We couldn’t load saved feedback.{" "}
+              <button onClick={journey.retry}>Try again</button>
             </p>
           )}
-          <Link
-            className={s.primary}
-            href={next ? `/interview/${next.id}` : "/allinterviews"}
-          >
-            {next
-              ? next.mode === "one_on_one"
-                ? "View interview details"
-                : "Prepare for interview"
-              : "View interviews"}
-            <ArrowRight size={16} />
-          </Link>
-          </div>
-        </div>
-        <div className={s.columns}>
-          <section
-            className={`${s.panel} ${s.panelOnVideo}`}
-            aria-labelledby="insights-title"
-          >
-            <div className={s.panelHeader}>
-              <div>
-                <span className={s.eyebrow}>AFTER THE CONVERSATION</span>
-                <h2 id="insights-title">Your interview insights</h2>
-              </div>
-              <Sparkles size={20} />
-            </div>
-            {reportLoading ? (
-              <p className={s.empty} role="status">
-                Loading your saved assessment…
-              </p>
-            ) : reportError ? (
-              <div className={s.empty}>
-                <p>Your assessment couldn’t be loaded.</p>
-                <button
-                  className={s.textLink}
-                  onClick={() => setAttempt((a) => a + 1)}
-                >
-                  Retry
-                </button>
-              </div>
-            ) : report ? (
-              <>
-                <div className={s.reportMeta}>
-                  <label>
-                    Interview
-                    <select
-                      aria-label="Select assessment"
-                      value={selected}
-                      onChange={(e) => setSelected(e.target.value)}
-                    >
-                      {reports.map((r) => (
-                        <option key={r.id} value={r.interview_id}>
-                          {interviews.find((i) => i.id === r.interview_id)
-                            ?.role || "Interview"}{" "}
-                          · {new Date(r.created_at).toLocaleDateString("en-IN")}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <span className={s.badge}>AI assessment</span>
+          <div className={s.grid}>
+            <section className={s.panel + " " + s.assessment}>
+              <div className={s.sectionTop}>
+                <div>
+                  <h2>
+                    Latest assessment{assessed ? " · " + assessed.role : ""}
+                  </h2>
+                  <p>
+                    {report
+                      ? "Recorded on " + interviewDate(report.created_at, false)
+                      : "Your saved assessment will appear here."}
+                  </p>
                 </div>
-                <div
-                  className={s.chart}
-                  aria-label={`Competency scores for ${reportInterview?.role || "interview"}`}
-                >
-                  {(report.analysis.categoryScores || [])
-                    .filter(
-                      (c) =>
-                        typeof c.score === "number" && Number.isFinite(c.score),
-                    )
-                    .map((c, index) => (
-                      <details
-                        key={`${report.id}-${index}`}
-                        className={s.chartRow}
-                      >
-                        <summary>
-                          <span>{c.name}</span>
-                          <span className={s.track}>
-                            <span
-                              className={s.bar}
-                              style={{
-                                width: `${Math.max(0, Math.min(100, c.score))}%`,
-                              }}
-                            />
-                          </span>
-                          <b>
-                            {c.score}
-                            <small>/100</small>
-                          </b>
-                        </summary>
-                        <p>
-                          {c.comment ||
-                            "No additional assessment comment was saved for this competency."}
-                        </p>
-                      </details>
-                    ))}
-                  {!report.analysis.categoryScores?.length && (
-                    <p className={s.empty}>
-                      This report has no competency scores yet.
-                    </p>
-                  )}
-                </div>
-                <p className={s.chartHint}>
-                  Select a competency to read its assessment. Scores use the
-                  saved interview rubric.
-                </p>
-                <div className={s.findings}>
-                  <div>
-                    <span className={s.eyebrow}>STRENGTH</span>
-                    <p>
-                      {report.analysis.strengths?.[0] ||
-                        "No strength summary recorded."}
-                    </p>
-                  </div>
-                  <div>
-                    <span className={s.eyebrow}>AREA TO DEVELOP</span>
-                    <p>
-                      {report.analysis.areasForImprovement?.[0] ||
-                        "No improvement summary recorded."}
-                    </p>
-                  </div>
-                </div>
-                <Link
-                  className={s.textLink}
-                  href={`/interview/${selected}/feedback`}
-                >
-                  Read full assessment <ArrowRight size={15} />
-                </Link>
-              </>
-            ) : (
-              <div className={s.empty}>
-                <div className={s.emptyChart} aria-hidden="true">
-                  <i />
-                  <i />
-                  <i />
-                  <i />
-                </div>
-                <h3>Your experience deserves a closer look.</h3>
-                <p>
-                  After an AI interview, your saved assessment will show
-                  competency scores, strengths and areas to develop here.
-                </p>
-                {next && (
-                  <Link className={s.textLink} href={`/interview/${next.id}`}>
-                    View your next interview <ArrowRight size={15} />
+                {report && (
+                  <Link
+                    href={"/interview/" + report.interview_id + "/feedback"}
+                  >
+                    View feedback <ArrowRight size={15} />
                   </Link>
                 )}
               </div>
-            )}
-          </section>
-          <section className={`${s.panel} ${s.panelOnVideo}`}>
-            <div className={s.panelHeader}>
-              <h2>Profile essentials</h2>
-              <UserRound size={18} />
-            </div>
-            <div className={s.profileSummary}>
-              <div
-                className={s.ring}
-                style={{
-                  background: `conic-gradient(#084d91 ${percent}%, #eaf0f6 0)`,
-                }}
+              {report ? (
+                <div className={s.assessmentBody}>
+                  <div className={s.bars}>
+                    {categories.length ? (
+                      categories.slice(0, 4).map((c, index) => (
+                        <div className={s.barRow} key={index}>
+                          <span>{c.name}</span>
+                          <div className={s.track} aria-hidden="true">
+                            <span
+                              style={{
+                                width:
+                                  Math.max(
+                                    0,
+                                    Math.min(
+                                      100,
+                                      Number.isFinite(c.score) ? c.score : 0,
+                                    ),
+                                  ) + "%",
+                              }}
+                            />
+                          </div>
+                          <strong>
+                            {Number.isFinite(c.score) ? c.score : "—"}
+                            <small> / 100</small>
+                          </strong>
+                        </div>
+                      ))
+                    ) : (
+                      <p>
+                        Detailed ratings are not available for this assessment.
+                      </p>
+                    )}
+                  </div>
+                  <div className={s.overall}>
+                    <h3>Overall assessment</h3>
+                    <strong>
+                      {hasScore ? score : "—"}
+                      <small>{hasScore ? " / 100" : ""}</small>
+                    </strong>
+                    <p className={s.overallText}>
+                      {report.analysis.finalAssessment ||
+                        "Read the full feedback for observations and next steps."}
+                    </p>
+                    {(report.analysis.finalAssessment?.length || 0) > 220 && (
+                      <button
+                        type="button"
+                        className={s.readMore}
+                        onClick={() => assessmentDialog.current?.showModal()}
+                      >
+                        Read more <ArrowRight size={13} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className={s.empty}>
+                  <FileCheck2 size={28} />
+                  <h3>
+                    {journey.feedbackLoading
+                      ? "Checking your assessment…"
+                      : "A clearer picture after your conversation."}
+                  </h3>
+                  <p>
+                    Once feedback is available, you’ll find your ratings and
+                    observations here.
+                  </p>
+                </div>
+              )}
+            </section>
+            <dialog
+              ref={assessmentDialog}
+              className="hire-dialog"
+              aria-labelledby="overall-assessment-title"
+            >
+              <button
+                type="button"
+                className="hire-icon-button hire-dialog-close"
+                aria-label="Close"
+                onClick={() => assessmentDialog.current?.close()}
               >
-                <strong>{percent}%</strong>
+                <X size={20} />
+              </button>
+              <p className="hire-eyebrow">Overall assessment</p>
+              <h2 id="overall-assessment-title">
+                {hasScore ? score + " / 100" : "Your assessment"}
+              </h2>
+              <p>{report?.analysis.finalAssessment}</p>
+            </dialog>
+            <section className={s.panel + " " + s.next}>
+              <div className={s.nextTitle}>
+                <span className={s.statIcon}>
+                  <CalendarDays />
+                </span>
+                <div>
+                  <p>Your next interview</p>
+                  <h2>{next?.role || "You’re all caught up."}</h2>
+                  <p>
+                    {next
+                      ? next.scheduled_at
+                        ? interviewDate(next.scheduled_at)
+                        : next.mode === "one_on_one"
+                          ? "Time to be confirmed"
+                          : "Start when you’re ready"
+                      : "Your recruiter will share any next steps."}
+                  </p>
+                </div>
               </div>
-              <div>
-                <strong>
-                  {checks.filter((c) => c.done).length} of 5 details
-                </strong>
-                <p>Keep your contact details and preferences ready.</p>
+              {next && (
+                <>
+                  <dl className={s.details}>
+                    <div>
+                      <dt>
+                        <UserRound size={18} />
+                        Interviewer
+                      </dt>
+                      <dd>
+                        {next.mode === "one_on_one"
+                          ? "Your recruitment team"
+                          : "Alex · AI interviewer"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>
+                        <Video size={18} />
+                        Mode
+                      </dt>
+                      <dd>
+                        {next.mode === "one_on_one"
+                          ? "One-on-one conversation"
+                          : "Self-paced AI interview"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>
+                        <FileText size={18} />
+                        Focus areas
+                      </dt>
+                      <dd>
+                        {next.techstack?.length
+                          ? next.techstack.join(", ")
+                          : next.type || "See your invitation for details"}
+                      </dd>
+                    </div>
+                  </dl>
+                  <div className={s.buttons}>
+                    <Link
+                      className="hire-button"
+                      href={"/interview/" + next.id}
+                    >
+                      Check details <ArrowRight size={16} />
+                    </Link>
+                    {next.scheduled_at &&
+                      Number.isFinite(Date.parse(next.scheduled_at)) && (
+                        <button
+                          className="hire-button"
+                          data-variant="secondary"
+                          onClick={() => downloadCalendar(next)}
+                        >
+                          <CalendarDays size={16} />
+                          Add to calendar
+                        </button>
+                      )}
+                  </div>
+                </>
+              )}
+            </section>
+            <section className={s.panel + " " + s.takeaways}>
+              <h2>Key takeaways from your assessment</h2>
+              <div className={s.takeawayGrid}>
+                <div>
+                  <span className={s.success}>
+                    <Check size={18} />
+                  </span>
+                  <div>
+                    <h3>Strength</h3>
+                    <p>
+                      {report?.analysis.strengths?.[0] ||
+                        "Your strengths will appear with your feedback."}
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <span className={s.followup}>
+                    <Info size={18} />
+                  </span>
+                  <div>
+                    <h3>Follow-up area</h3>
+                    <p>
+                      {report?.analysis.areasForImprovement?.[0] ||
+                        "Development points will appear when available."}
+                    </p>
+                  </div>
+                </div>
               </div>
-            </div>
-            <ul className={s.checks}>
-              {checks.map((c) => (
-                <li key={c.label}>
-                  <span>{c.label}</span>
-                  {c.done ? (
-                    <Check size={16} aria-label="Complete" />
-                  ) : (
-                    <span className={s.missing}>Add</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-            <Link className={s.secondary} href="/profile">
-              Update profile <ArrowRight size={15} />
-            </Link>
-            <p className={s.fine}>Preferences are saved in this browser.</p>
-          </section>
-        </div>
-      </section>
-      <div className={s.columns}>
-        <div className={s.mainColumn}>
-          <section className={s.panel}>
-            <div className={s.panelHeader}>
-              <div>
-                <span className={s.eyebrow}>YOUR CONVERSATIONS</span>
-                <h2>Interview activity</h2>
+            </section>
+            <section className={s.panel + " " + s.preparation}>
+              <h2>
+                <BookOpen size={20} />
+                Prepare for success
+              </h2>
+              <div className={s.resource}>
+                <div className={s.resourceImage}>
+                  <Image
+                    src={
+                      (process.env.NEXT_PUBLIC_BASE_PATH || "") +
+                      "/brand/solar-array-small.webp"
+                    }
+                    alt="Solar farm"
+                    fill
+                    sizes="120px"
+                  />
+                </div>
+                <div>
+                  <h3>Get to know Chirayu Power</h3>
+                  <p>The company and the work behind your next conversation.</p>
+                  <a
+                    href="https://chirayupower.com/about-us/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Explore the company <ArrowRight size={15} />
+                  </a>
+                </div>
               </div>
-              <Link className={s.textLink} href="/allinterviews">
-                View all <ArrowUpRight size={14} />
-              </Link>
-            </div>
-            {loading ? (
-              <PortalLoading variant="list" />
-            ) : error ? (
-              <div className={s.empty} role="alert">
-                <p>{error}</p>
-                <button
-                  className={s.textLink}
-                  onClick={() => setAttempt((a) => a + 1)}
-                >
-                  Retry
-                </button>
+            </section>
+            <section
+              className={s.panel + " " + s.history}
+              id="interview-history"
+            >
+              <div className={s.sectionTop}>
+                <h2>Your interviews</h2>
+                <Link href="/allinterviews">
+                  View all interviews <ArrowRight size={15} />
+                </Link>
               </div>
-            ) : interviews.length ? (
-              <div className={s.tableWrap}>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Role / interview</th>
-                      <th>Schedule</th>
-                      <th>Status</th>
-                      <th>
-                        <span className="sr-only">Action</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {interviews.slice(0, 5).map((i) => (
-                      <tr key={i.id}>
-                        <td>
-                          <strong>{i.role}</strong>
-                          <small>
-                            {i.mode === "one_on_one"
-                              ? "One-on-one"
-                              : "AI interview"}
-                          </small>
-                        </td>
-                        <td>
-                          {i.scheduled_at
-                            ? date(i.scheduled_at)
-                            : i.mode === "one_on_one"
-                              ? "To be scheduled"
-                              : "Self-paced"}
-                        </td>
-                        <td>
-                          <span
-                            className={s.status}
-                            data-complete={completed(i)}
-                          >
-                            {status(i)}
-                          </span>
-                        </td>
-                        <td>
-                          <Link
-                            aria-label={`Open ${i.role}`}
-                            href={`/interview/${i.id}`}
-                          >
-                            <ArrowUpRight size={18} />
-                          </Link>
-                        </td>
+              {interviews.length ? (
+                <div className={s.tableWrap}>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Role</th>
+                        <th>Mode</th>
+                        <th>Date &amp; time</th>
+                        <th>Status</th>
+                        <th>Action</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className={s.empty}>
-                No invitations are assigned to {email} yet. Return here when
-                your recruitment team invites you.
-              </p>
-            )}
-          </section>
-        </div>
-        <aside className={s.rail}>
-          <section className={`${s.panel} ${s.prepare}`}>
-            <div className={s.wave} aria-hidden="true">
-              {[1, 2, 3, 4, 5].map((n) => (
-                <i key={n} />
-              ))}
-            </div>
-            <h2>Ready when you are.</h2>
-            <p>
-              Check your microphone, camera and speaker before your AI
-              interview.
-            </p>
-            {next && next.mode !== "one_on_one" ? (
-              <Link className={s.textLink} href={`/interview/${next.id}`}>
-                Open device check <ArrowRight size={15} />
-              </Link>
-            ) : (
-              <Link className={s.textLink} href="/allinterviews">
-                View available interviews <ArrowRight size={15} />
-              </Link>
-            )}
-          </section>
-          <div className={s.note}>
-            <Clock3 size={16} />
-            <p>
-              Schedules use your device’s timezone. Your interview details
-              contain the joining instructions.
-            </p>
+                    </thead>
+                    <tbody>
+                      {interviews.slice(0, 5).map((i) => {
+                        const hasReport = reports.some(
+                          (r) => r.interview_id === i.id,
+                        );
+                        const state = interviewState(i, hasReport, now);
+                        return (
+                          <tr key={i.id}>
+                            <td data-label="Role">{i.role}</td>
+                            <td data-label="Mode">
+                              {i.mode === "one_on_one"
+                                ? "One-on-one"
+                                : "AI interview"}
+                            </td>
+                            <td data-label="Date & time">
+                              {i.scheduled_at
+                                ? interviewDate(i.scheduled_at)
+                                : hasReport
+                                  ? interviewDate(
+                                      reports.find(
+                                        (r) => r.interview_id === i.id,
+                                      )?.created_at || null,
+                                    )
+                                  : state.group !== "upcoming"
+                                    ? "Not recorded"
+                                    : i.mode !== "one_on_one"
+                                      ? "Self-paced"
+                                      : "To be confirmed"}
+                            </td>
+                            <td data-label="Status">
+                              <span className={s.status} data-tone={state.tone}>
+                                {state.label}
+                              </span>
+                            </td>
+                            <td data-label="Action">
+                              {hasReport ? (
+                                <Link href={"/interview/" + i.id + "/feedback"}>
+                                  View feedback <ArrowRight size={14} />
+                                </Link>
+                              ) : state.group === "upcoming" ? (
+                                <Link href={"/interview/" + i.id}>
+                                  Check details <ArrowRight size={14} />
+                                </Link>
+                              ) : (
+                                <span className={s.muted}>
+                                  {state.group === "closed"
+                                    ? "Contact recruiter"
+                                    : "Feedback pending"}
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className={s.notice}>
+                  No invitations yet. Check your invitation email or contact
+                  your recruiter.
+                </p>
+              )}
+            </section>
           </div>
-        </aside>
-      </div>
-      <footer className={s.footer}>
-        <span>CHIRAYU HIRE</span>
-        <p>One workspace. Every conversation.</p>
-        <a
-          href="https://chirayupower.com"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Chirayu Power <ArrowUpRight size={13} />
-        </a>
-      </footer>
+        </>
+      )}
     </div>
   );
 }

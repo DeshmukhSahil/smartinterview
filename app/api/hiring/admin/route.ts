@@ -1,5 +1,5 @@
 import { campaignSchema } from "@/lib/hiring/schema";
-import { cors, erp, failure, requireHR, deliver } from "@/lib/hiring/server";
+import { cors, erp, failure, requireHR, deliver, retakeInterview } from "@/lib/hiring/server";
 export const dynamic = "force-dynamic";
 export async function OPTIONS(r: Request) { return new Response(null, { status: 204, headers: cors(r) }); }
 export async function GET(r: Request) {
@@ -22,6 +22,11 @@ export async function POST(r: Request) {
       const id = (await import("zod")).z.string().uuid().parse(body.retry_id);
       await deliver(id);
       return Response.json({ success: true }, { headers: cors(r) });
+    }
+    if (body.retake_id) {
+      const id = (await import("zod")).z.string().uuid().parse(body.retake_id);
+      const interview = await retakeInterview(id);
+      return Response.json({ success: true, interview }, { headers: cors(r) });
     }
     if (body.resume_id) {
       const id = (await import("zod")).z.string().uuid().parse(body.resume_id);

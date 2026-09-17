@@ -25,7 +25,7 @@ const OneOnOneStatus = ({ interview }: { interview: any }) => {
   const joinWindowOpen = scheduledMs !== null && now >= scheduledMs - 10 * 60000 && now <= scheduledMs + 2 * 3600000;
 
   return (
-    <div className="max-w-xl mx-auto bg-white border border-border-gray rounded-2xl shadow-sm p-8 flex flex-col items-center text-center gap-5">
+    <div className="hire-card max-w-xl mx-auto flex flex-col items-center text-center gap-6">
       {status === "completed" ? (
         <>
           <div className="size-16 rounded-full bg-green-50 border border-green-200 flex items-center justify-center">
@@ -55,13 +55,13 @@ const OneOnOneStatus = ({ interview }: { interview: any }) => {
               href={joinUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-success-green hover:bg-success-green/90 text-white font-bold px-6 py-3 rounded-xl text-sm transition shadow-xs"
+              className="hire-button"
             >
               Join Interview
               <ExternalLink size={15} />
             </a>
           ) : (
-            <div className="flex items-center gap-2 bg-gray-50 border border-border-gray text-soft-gray text-xs font-semibold px-4 py-2.5 rounded-xl">
+            <div className="flex items-center gap-2 bg-gray-50 border border-border-gray text-soft-gray text-sm font-medium px-4 py-2.5 rounded-xl">
               <Hourglass size={14} />
               The join link will appear here 10 minutes before your interview
             </div>
@@ -82,7 +82,7 @@ const OneOnOneStatus = ({ interview }: { interview: any }) => {
       )}
       <div
         className={cn(
-          "text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full border mt-2",
+          "text-xs font-medium px-3 py-1 rounded-full border mt-2",
           status === "completed" ? "bg-green-50 border-green-200 text-success-green"
             : status === "scheduled" ? "bg-blue-50 border-blue-200 text-primary-blue"
             : "bg-amber-50 border-amber-200 text-amber-600"

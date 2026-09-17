@@ -76,45 +76,60 @@ const fs = require("node:fs");
       ],
     }),
   );
-  await page.goto("http://localhost:3095", { waitUntil: "networkidle" });
+  await page.goto(process.env.INTERVIEW_TEST_URL || "http://localhost:3095", {
+    waitUntil: "networkidle",
+  });
+  await page.getByRole("heading", { name: "Overall assessment" }).waitFor();
   await page
-    .getByRole("heading", { name: "Your interview insights" })
+    .getByRole("button", { name: "Add to calendar", exact: true })
     .waitFor();
-  await page.getByLabel("Select assessment").waitFor();
+  await page.getByRole("navigation", { name: "Sidebar navigation" }).waitFor();
   assert.equal(
     await page
-      .getByRole("complementary", { name: "Portal sidebar" })
-      .evaluate((e) => getComputedStyle(e).backgroundColor),
-    "rgb(255, 255, 255)",
+      .getByRole("link", { name: "Overview", exact: true })
+      .getAttribute("aria-current"),
+    "page",
   );
-  await page.locator("summary").first().click();
   await page
-    .getByText("Explained supplier evaluation with a specific example.")
+    .getByText(
+      "Explained supplier selection using cost, quality and delivery criteria.",
+    )
     .waitFor();
-  await page.locator("summary").first().click();
   assert.equal(
-    await page
-      .locator('img[src*="solar-hero"]')
-      .evaluate((e) => e.complete && e.naturalWidth > 0),
-    true,
+    await page.locator("video").count(),
+    0,
+    "overview does not load decorative video",
   );
   fs.mkdirSync("artifacts", { recursive: true });
   await page.screenshot({
     path: "artifacts/candidate-dashboard-desktop.png",
     fullPage: true,
   });
-  await page.getByRole("link", { name: "Update profile" }).click();
+  await page.getByRole("link", { name: "Review your details" }).click();
   await page.getByLabel("Phone number").fill("+91 9000000000");
   await page.getByLabel("Preferred work location").fill("Nagpur");
   await page
     .getByLabel("Interview availability")
-    .fill("Weekdays, 10 AM�1 PM IST");
-  await page.getByRole("button", { name: "Save preferences" }).click();
+    .fill("Weekdays, 10 AM–1 PM IST");
+  await page.getByRole("button", { name: "Save notes" }).click();
   await page
-    .getByText("Preferences saved in this browser.", { exact: true })
+    .getByText("Your notes are saved in this browser.", { exact: true })
     .waitFor();
-  await page.getByRole("link", { name: "Dashboard", exact: true }).click();
-  await page.getByText("100%", { exact: true }).waitFor();
+  await page.reload({ waitUntil: "networkidle" });
+  assert.equal(
+    await page.getByLabel("Preferred work location").inputValue(),
+    "Nagpur",
+  );
+  await page.getByLabel("Preferred work location").fill("Pune");
+  await page.getByRole("button", { name: "Discard changes" }).click();
+  assert.equal(
+    await page.getByLabel("Preferred work location").inputValue(),
+    "Nagpur",
+  );
+  await page.getByRole("link", { name: "Overview", exact: true }).click();
+  await page
+    .getByRole("heading", { name: "Your interview overview" })
+    .waitFor();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({
     path: "artifacts/candidate-dashboard-mobile.png",
@@ -127,24 +142,42 @@ const fs = require("node:fs");
     true,
     "no horizontal overflow",
   );
-  await page.getByRole("button", { name: "Open navigation" }).click();
-  await page.getByRole("navigation", { name: "Portal navigation" }).waitFor();
-  await page.getByRole("button", { name: "Close menu", exact: true }).click();
+  await page.getByRole("button", { name: "Help", exact: true }).click();
+  await page.getByRole("dialog", { name: "A little guidance." }).waitFor();
+  await page.keyboard.press("Escape");
+  assert.equal(
+    await page
+      .getByRole("button", { name: "Help", exact: true })
+      .evaluate((e) => e === document.activeElement),
+    true,
+  );
+  await page.getByLabel("Your account", { exact: true }).click();
+  await page.getByRole("link", { name: "Your profile", exact: true }).waitFor();
+  await page.keyboard.press("Escape");
+  assert.equal(await page.locator("details[open]").count(), 0);
   await page.route("**/rest/v1/feedback*", (r) => r.fulfill({ json: [] }));
   await page.reload({ waitUntil: "networkidle" });
-  await page.getByText("Your experience deserves a closer look.").waitFor();
+  await page
+    .getByRole("button", { name: "Add to calendar", exact: true })
+    .waitFor();
+  assert.equal(
+    await page.getByRole("heading", { name: "Overall assessment" }).count(),
+    0,
+  );
   await page.route("**/rest/v1/interviews*", (r) =>
     r.fulfill({ status: 500, json: { message: "fixture error" } }),
   );
   await page.reload({ waitUntil: "networkidle" });
   await page
     .getByRole("alert")
-    .filter({ hasText: /load your interviews/ })
+    .filter({ hasText: /load your invitations/ })
     .waitFor();
-  await page.getByRole("button", { name: "Retry", exact: true }).waitFor();
+  await page
+    .getByRole("button", { name: "Retry loading", exact: true })
+    .waitFor();
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: desktop, real-score chart, evidence expansion, image load, local profile persistence, mobile overflow/menu, empty and failure states.",
+    "PASS: next conversation, saved feedback, local notes persistence and discard, mobile overflow, help and account keyboard dismissal, missing feedback and failure states.",
   );
   await browser.close();
 })().catch((e) => {

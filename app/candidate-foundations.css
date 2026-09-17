@@ -1,0 +1,377 @@
+/* Chirayu Hire foundations. Scoped to candidate surfaces; HR and careers retain their styles. */
+[data-candidate-portal] {
+  --hire-paper: #f7f6f2;
+  --hire-white: #ffffff;
+  --hire-ink: #203447;
+  --hire-muted: #5d6d7b;
+  --hire-blue: #084d91;
+  --hire-blue-hover: #063d74;
+  --hire-blue-wash: #eaf1f8;
+  --hire-line: #dce2e5;
+  --hire-yellow: #f4b400;
+  --hire-success: #246b50;
+  --hire-error: #a33232;
+  --hire-space-1: 4px;
+  --hire-space-2: 8px;
+  --hire-space-3: 12px;
+  --hire-space-4: 16px;
+  --hire-space-6: 24px;
+  --hire-space-8: 32px;
+  --hire-space-12: 48px;
+  --hire-space-16: 64px;
+  --hire-radius: 8px;
+  --hire-fast: 150ms;
+  --hire-reveal: 200ms;
+  --hire-dialog-duration: 250ms;
+  --hire-content-duration: 420ms;
+  --hire-ease: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --hire-shadow: 0 12px 36px #20344714;
+  color: var(--hire-ink);
+  font-family: var(--font-inter), Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  background: var(--hire-paper);
+  accent-color: var(--hire-blue);
+  color-scheme: light;
+}
+[data-candidate-portal] :where(h1, h2, h3) {
+  color: var(--hire-ink);
+  font-weight: 500;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+[data-candidate-portal] :where(h1) {
+  font-size: clamp(32px, 4vw, 48px);
+  line-height: 1.15;
+  letter-spacing: -0.035em;
+}
+[data-candidate-portal] :where(h2) {
+  font-size: 24px;
+  line-height: 1.3;
+  letter-spacing: -0.025em;
+}
+[data-candidate-portal] :where(h3) {
+  font-size: 20px;
+  line-height: 1.4;
+  letter-spacing: -0.015em;
+}
+[data-candidate-portal] :where(p) {
+  color: var(--hire-muted);
+}
+[data-candidate-portal] :where(button, input, select, textarea) {
+  font-family: inherit;
+}
+[data-candidate-portal] :where(button, a, summary) {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+[data-candidate-portal] :where(button, summary) {
+  cursor: pointer;
+}
+[data-candidate-portal]
+  :where(button:disabled, input:disabled, select:disabled, textarea:disabled) {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+[data-candidate-portal]
+  :where(a, button, input, select, textarea, summary):focus-visible {
+  outline: 2px solid var(--hire-blue);
+  outline-offset: 4px;
+}
+[data-candidate-portal] :where(svg.lucide) {
+  stroke-width: 1.75;
+  flex-shrink: 0;
+}
+[data-candidate-portal] .hire-eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--hire-muted);
+}
+[data-candidate-portal] .hire-page-heading {
+  margin-bottom: var(--hire-space-12);
+  max-width: 760px;
+}
+[data-candidate-portal] .hire-page-heading h1 {
+  font-size: clamp(32px, 4vw, 48px);
+  font-weight: 500;
+}
+[data-candidate-portal] .hire-page-heading p {
+  font-size: 16px;
+  margin-top: 16px;
+}
+[data-candidate-portal] .hire-button,
+[data-candidate-portal] .btn-primary,
+[data-candidate-portal] .btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  height: auto;
+  padding: 12px 20px;
+  border: 1px solid transparent;
+  border-radius: var(--hire-radius) !important;
+  font-size: 14px;
+  font-weight: 500 !important;
+  line-height: 1.4;
+  text-align: center;
+  white-space: normal;
+  text-decoration: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  transform: none;
+  will-change: auto;
+  transition:
+    background-color var(--hire-fast),
+    border-color var(--hire-fast),
+    color var(--hire-fast);
+}
+[data-candidate-portal] .hire-button,
+[data-candidate-portal] .btn-primary {
+  background: var(--hire-blue) !important;
+  color: white !important;
+}
+[data-candidate-portal] .hire-button:hover:not(:disabled),
+[data-candidate-portal] .btn-primary:hover:not(:disabled) {
+  background: var(--hire-blue-hover) !important;
+  box-shadow: none;
+  transform: none;
+}
+[data-candidate-portal] .hire-button[data-variant="secondary"],
+[data-candidate-portal] .btn-secondary {
+  background: var(--hire-white) !important;
+  color: var(--hire-blue) !important;
+  border-color: var(--hire-line);
+}
+[data-candidate-portal]
+  .hire-button[data-variant="secondary"]:hover:not(:disabled),
+[data-candidate-portal] .btn-secondary:hover:not(:disabled) {
+  background: var(--hire-blue-wash) !important;
+  border-color: var(--hire-blue);
+}
+[data-candidate-portal] .hire-button[data-variant="destructive"] {
+  background: var(--hire-error) !important;
+}
+[data-candidate-portal] .hire-button[data-variant="ghost"],
+[data-candidate-portal] .hire-button[data-variant="link"] {
+  background: transparent !important;
+  color: var(--hire-blue) !important;
+}
+[data-candidate-portal] .hire-button[data-variant="link"] {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+[data-candidate-portal] .hire-button:disabled {
+  opacity: 0.55;
+  pointer-events: none;
+}
+[data-candidate-portal] .hire-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--hire-radius);
+  color: var(--hire-muted);
+}
+[data-candidate-portal] .hire-icon-button:hover {
+  background: var(--hire-blue-wash);
+  color: var(--hire-blue);
+}
+[data-candidate-portal]
+  :is(
+    input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+    select,
+    textarea
+  ) {
+  min-height: 48px;
+  max-width: 100%;
+  border: 1px solid var(--hire-line);
+  border-radius: var(--hire-radius);
+  background-color: var(--hire-white);
+  color: var(--hire-ink);
+  padding: 12px 14px;
+  font-size: 16px;
+  line-height: 1.5;
+  box-shadow: none;
+  transition:
+    border-color var(--hire-fast),
+    box-shadow var(--hire-fast);
+}
+[data-candidate-portal] input::placeholder,
+[data-candidate-portal] textarea::placeholder {
+  color: var(--hire-muted);
+  opacity: 0.85;
+}
+[data-candidate-portal] :is(input, select, textarea):focus-visible {
+  border-color: var(--hire-blue);
+  outline: 2px solid var(--hire-blue);
+  outline-offset: 2px;
+}
+[data-candidate-portal] :is(input, select, textarea)[aria-invalid="true"] {
+  border-color: var(--hire-error);
+}
+[data-candidate-portal] .hire-card,
+[data-candidate-portal] .card {
+  background: var(--hire-white);
+  border: 1px solid var(--hire-line);
+  border-radius: var(--hire-radius);
+  padding: var(--hire-space-8);
+  box-shadow: none;
+  min-width: 0;
+}
+[data-candidate-portal] .card:hover {
+  box-shadow: none;
+  border-color: var(--hire-line);
+}
+[data-candidate-portal] .hire-dialog {
+  position: fixed;
+  margin: auto;
+  width: min(480px, calc(100vw - 40px));
+  max-height: calc(100dvh - 40px);
+  padding: 40px 32px 32px;
+  border: 1px solid var(--hire-line);
+  border-radius: var(--hire-radius);
+  background: var(--hire-white);
+  color: var(--hire-ink);
+  box-shadow: var(--hire-shadow);
+}
+[data-candidate-portal] .hire-dialog[open] {
+  animation: hire-reveal var(--hire-dialog-duration) var(--hire-ease);
+}
+[data-candidate-portal] .hire-dialog::backdrop {
+  background: #20344766;
+}
+[data-candidate-portal] .hire-dialog h2 {
+  margin: 12px 0 24px;
+  padding-right: 16px;
+  font-size: 28px;
+}
+[data-candidate-portal] .hire-dialog p + p {
+  margin-top: 16px;
+}
+[data-candidate-portal] .hire-dialog > .hire-button {
+  margin-top: 24px;
+}
+[data-candidate-portal] .hire-dialog-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+[data-candidate-portal] .hire-motion-reveal {
+  animation: hire-reveal var(--hire-reveal) var(--hire-ease);
+}
+[data-candidate-portal] .hire-motion-disclosure {
+  transition:
+    opacity var(--hire-reveal),
+    background-color var(--hire-reveal);
+}
+@keyframes hire-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* One reveal per page; no scroll listeners, looping effects, or animated scores. */
+[data-candidate-portal] .hire-page-enter {
+  animation: hire-page-enter var(--hire-content-duration) var(--hire-ease) both;
+}
+@keyframes hire-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-candidate-portal] .hire-button > svg {
+    transition: transform 180ms var(--hire-ease);
+  }
+  [data-candidate-portal] .hire-button:hover > svg {
+    transform: translateX(2px);
+  }
+}
+@media (max-width: 600px) {
+  [data-candidate-portal] .hire-page-enter {
+    animation-name: hire-mobile-enter;
+    animation-duration: 300ms;
+  }
+  [data-candidate-portal] .hire-page-heading {
+    margin-bottom: 32px;
+  }
+  [data-candidate-portal] .hire-card,
+  [data-candidate-portal] .card {
+    padding: 24px;
+  }
+}
+@keyframes hire-mobile-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-candidate-portal] .hire-button > svg { transform: none !important; }
+  [data-candidate-portal] *,
+  [data-candidate-portal] *::before,
+  [data-candidate-portal] *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+[data-candidate-portal] .hire-interview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 24px;
+}
+[data-candidate-portal] .hire-interview-card {
+  transition: border-color var(--hire-fast);
+}
+[data-candidate-portal] .hire-interview-card h3 {
+  font-weight: 500;
+}
+[data-candidate-portal] .hire-interview-card > div:first-child {
+  flex-wrap: wrap;
+}
+[data-candidate-portal] .hire-interview-card > div:last-child {
+  flex-wrap: wrap;
+}
+[data-candidate-portal] .hire-feedback-panel {
+  background: var(--hire-white);
+  border: 1px solid var(--hire-line);
+  border-radius: var(--hire-radius);
+  box-shadow: var(--hire-shadow);
+}
+[data-candidate-portal] .hire-feedback-panel > div:first-child {
+  background: var(--hire-blue);
+  border-radius: 8px 8px 0 0;
+}
+[data-candidate-portal] .hire-feedback-panel > div:last-child {
+  border-radius: 0 0 8px 8px;
+}
+/* Keep scroll position discoverable in candidate pages. */
+html:has([data-candidate-portal]),
+body:has([data-candidate-portal]) {
+  scrollbar-width: auto;
+  -ms-overflow-style: auto;
+}
+html:has([data-candidate-portal])::-webkit-scrollbar,
+body:has([data-candidate-portal])::-webkit-scrollbar {
+  display: block;
+}
+[data-candidate-portal] .hire-feedback-panel > div:first-child :is(h2, p) {
+  color: white;
+}

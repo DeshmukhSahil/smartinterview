@@ -1,0 +1,267 @@
+/* Job description page for a selected /apply role, shown between the role
+   picker and the application form (see job-hero.css / hiring.css for those).
+   Its own class names (job-detail-*) so it doesn't inherit or fight the
+   page's other stylesheets. */
+
+.job-detail {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  margin: 24px 0;
+  box-shadow: 0 10px 30px rgba(15, 41, 66, 0.06);
+}
+
+/* Stays put while the description scrolls underneath it. 72px matches the
+   navbar's scrolled height (Navbar.module.css .scrolled) so the header sits
+   flush against it instead of leaving a gap or being covered. */
+.job-detail-header {
+  position: sticky;
+  top: 72px;
+  z-index: 5;
+  background: white;
+  border-radius: 16px 16px 0 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 28px 32px;
+  border-bottom: 1px solid #e2e8f0;
+  flex-wrap: wrap;
+}
+
+.job-detail-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  min-width: 0;
+}
+
+.job-detail-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background: #eaf1f8;
+  color: #07549b;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.job-detail-title-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.job-detail-title-line h1 {
+  font-size: clamp(20px, 2.4vw, 26px);
+  font-weight: 800;
+  color: #18314a;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.job-detail-jobid {
+  font-size: 11px;
+  font-weight: 700;
+  color: #60768b;
+  background: #f1f5f9;
+  padding: 4px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.job-detail-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #60768b;
+  font-weight: 500;
+  flex-wrap: wrap;
+}
+
+.job-detail-meta span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.job-detail-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #c9d6e2;
+}
+
+.job-detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.job-detail-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: white;
+  border: 1px solid #dbe9fb;
+  color: #18314a;
+  font-weight: 600;
+  font-size: 13px;
+  font-family: inherit;
+  padding: 11px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.job-detail-back:hover {
+  background: #f6faff;
+  border-color: #07549b;
+}
+
+.job-detail-apply {
+  background: #07549b;
+  color: white;
+  border: 0;
+  font-weight: 700;
+  font-size: 13px;
+  font-family: inherit;
+  padding: 12px 26px;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(7, 84, 155, 0.25);
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.job-detail-apply:hover {
+  background: #053f75;
+  transform: translateY(-1px);
+}
+
+.job-detail-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 40px;
+  padding: 28px 32px 36px;
+}
+
+.job-detail-description {
+  color: #43586e;
+  font-size: 14px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  margin: 0 0 8px;
+}
+
+.job-detail-main h3 {
+  font-size: 14px;
+  font-weight: 800;
+  color: #18314a;
+  margin: 22px 0 10px;
+}
+
+.job-detail-main ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #43586e;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.job-detail-main li {
+  margin-bottom: 8px;
+}
+
+.job-detail-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.job-detail-sidebar-item h4 {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #7990a3;
+  margin: 0 0 6px;
+}
+
+.job-detail-sidebar-item p {
+  font-size: 14px;
+  font-weight: 600;
+  color: #18314a;
+  margin: 0;
+}
+
+.job-detail-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.job-detail-skills span {
+  font-size: 12px;
+  font-weight: 600;
+  color: #18314a;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 6px 12px;
+  border-radius: 8px;
+}
+
+.job-detail-backlink {
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 0;
+  color: #07549b;
+  font-weight: 700;
+  font-size: 12px;
+  font-family: inherit;
+  padding: 0;
+  margin-bottom: 14px;
+  cursor: pointer;
+}
+
+.job-detail-backlink:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 900px) {
+  .job-detail-body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+  .job-detail-sidebar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 20px 32px;
+  }
+}
+
+@media (max-width: 640px) {
+  .job-detail-header {
+    padding: 22px 20px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .job-detail-body {
+    padding: 22px 20px 28px;
+  }
+  .job-detail-actions {
+    justify-content: stretch;
+  }
+  .job-detail-back,
+  .job-detail-apply {
+    flex: 1;
+    justify-content: center;
+  }
+}

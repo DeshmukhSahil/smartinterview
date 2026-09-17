@@ -58,16 +58,19 @@ const base = process.env.INTERVIEW_TEST_URL || "http://localhost:3095";
     1,
     "one mounted room",
   );
-  const sidebar = page.getByRole("complementary", { name: "Portal sidebar" });
-  await sidebar.waitFor();
+  await page
+    .getByRole("navigation", { name: "Candidate navigation" })
+    .waitFor();
   assert.equal(
-    await sidebar.evaluate((e) => getComputedStyle(e).backgroundColor),
-    "rgb(255, 255, 255)",
+    await page
+      .getByRole("link", { name: "Your interviews", exact: true })
+      .getAttribute("aria-current"),
+    "page",
   );
-  await sidebar.getByRole("img", { name: "Chirayu Power Logo" }).waitFor();
   assert.equal(
-    await sidebar
+    await page
       .getByRole("img", { name: "Chirayu Power Logo" })
+      .first()
       .evaluate((e) => e.complete && e.naturalWidth > 0),
     true,
   );
@@ -153,7 +156,11 @@ const base = process.env.INTERVIEW_TEST_URL || "http://localhost:3095";
   assert.ok(!selected.includes("*") && !selected.includes("resume"));
   assert.equal(
     await home
-      .getByRole("link", { name: "Open interview", exact: true })
+      .getByRole("table")
+      .getByRole("link", {
+        name: "Check details",
+        exact: true,
+      })
       .count(),
     3,
     "invitation links work before optional feedback arrives",
@@ -161,9 +168,12 @@ const base = process.env.INTERVIEW_TEST_URL || "http://localhost:3095";
   assert.equal(batches, 1, "one feedback request for three cards");
   finishBatch();
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole("button", { name: "Open navigation" }).click();
-  await page.getByRole("navigation", { name: "Portal navigation" }).waitFor();
-  await page.getByRole("button", { name: "Close menu" }).click();
+  await page
+    .getByRole("navigation", { name: "Candidate navigation" })
+    .waitFor();
+  await page.getByRole("button", { name: "Help", exact: true }).click();
+  await page.getByRole("dialog", { name: "A little guidance." }).waitFor();
+  await page.keyboard.press("Escape");
   assert.equal(
     await page.evaluate(
       () => document.documentElement.scrollWidth > innerWidth,
@@ -192,12 +202,12 @@ const base = process.env.INTERVIEW_TEST_URL || "http://localhost:3095";
   console.log(
     JSON.stringify({
       passed: [
-        "white sidebar and original logo",
+        "candidate header and original logo",
         "single room mount",
         "room does not wait for feedback",
         "one-on-one scheduled Teams link preserved",
         "no AI speech on one-on-one route",
-        "3 invitation cards = 1 feedback request",
+        "3 invitations = 1 feedback request",
         "links available during feedback loading",
         "lightweight list payload",
         "mobile navigation",
