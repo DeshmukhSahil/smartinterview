@@ -76,8 +76,15 @@ export default function GlitterBackground() {
       cssH = h;
       canvas!.width = Math.round(w * dpr);
       canvas!.height = Math.round(h * dpr);
-      canvas!.style.width = `${w}px`;
-      canvas!.style.height = `${h}px`;
+      // Deliberately NOT setting canvas.style.width/height here: the
+      // .glitter-canvas CSS rule (width:100%; height:100%) is what keeps
+      // the canvas's rendered box tracking .hiring-page's height as
+      // content loads in. An inline pixel style would win over that CSS
+      // rule and permanently pin the canvas to whatever (possibly still-
+      // loading, too-short) height it had at that instant -- which also
+      // stops the ResizeObserver below from ever firing again, since it's
+      // observing this same element and its box would no longer change
+      // when the parent grows.
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
