@@ -631,7 +631,9 @@ export default function HiringApplication() {
                     >
                       <span className="role-tile-icon"><Icon size={26} /></span>
                       <strong>{role.role}</strong>
-                      {!role.is_open && <span className="role-tile-closed-badge">Closed</span>}
+                      <span className={role.is_open ? "role-tile-open-badge" : "role-tile-closed-badge"}>
+                        {role.is_open ? "Open" : "Closed"}
+                      </span>
                       <span className="role-tile-count">
                         {role.locations.length === 1 ? role.locations[0] : `${role.locations.length} locations`}
                       </span>
@@ -715,9 +717,9 @@ export default function HiringApplication() {
                     <div className="job-detail-title-line">
                       <h1>{c.role}</h1>
                       <span className="job-detail-jobid">Job ID: {c.job_code || c.id.slice(0, 8).toUpperCase()}</span>
-                      {!c.is_open && (
-                        <span className="job-detail-closed-badge" role="status">Closed</span>
-                      )}
+                      <span className={c.is_open ? "job-detail-open-badge" : "job-detail-closed-badge"} role="status">
+                        {c.is_open ? "Open" : "Closed"}
+                      </span>
                     </div>
                     <div className="job-detail-meta">
                       <span><Building2 size={14} aria-hidden="true" /> {c.workplace_type}</span>

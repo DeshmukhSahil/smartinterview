@@ -290,15 +290,24 @@
   color: #60768b;
 }
 
-.role-tile-closed-badge {
+.role-tile-closed-badge,
+.role-tile-open-badge {
   font-size: 10px;
   font-weight: 700;
-  color: #9a3412;
-  background: #ffedd5;
   padding: 2px 8px;
   border-radius: 20px;
   text-transform: uppercase;
   letter-spacing: 0.03em;
+}
+
+.role-tile-closed-badge {
+  color: #9a3412;
+  background: #ffedd5;
+}
+
+.role-tile-open-badge {
+  color: #166534;
+  background: #dcfce7;
 }
 
 .role-tile-viewall {
