@@ -25,6 +25,7 @@ import {
   Castle,
   ChevronLeft,
   ChevronRight,
+  Bell,
 } from "lucide-react";
 import type { Campaign } from "@/lib/hiring/schema";
 import Navbar from "@/components/Navbar";
@@ -703,6 +704,36 @@ export default function HiringApplication() {
                 >
                   <ChevronRight size={20} />
                 </button>
+              </div>
+            </section>
+          )}
+
+          {!c && !loading && (
+            <section className="job-alerts-panel">
+              <div className="job-alerts-text">
+                <h2>
+                  Never miss out on the latest <span>career opportunities</span>
+                </h2>
+                <p>Get notified the moment a role that fits opens up.</p>
+                <a
+                  className="job-alerts-btn"
+                  href="mailto:hr@chirayupower.com?subject=Job%20alerts%20sign-up"
+                >
+                  <Bell size={16} aria-hidden="true" />
+                  Get Job Alerts
+                </a>
+              </div>
+              <div className="job-alerts-image">
+                <img
+                  src={`${BASE_PATH}/brand/job-alerts-guy.png`}
+                  alt=""
+                  aria-hidden="true"
+                />
+                {totalActiveJobs > 0 && (
+                  <span className="job-alerts-bubble">
+                    <strong>{totalActiveJobs}+</strong> open roles right now
+                  </span>
+                )}
               </div>
             </section>
           )}
