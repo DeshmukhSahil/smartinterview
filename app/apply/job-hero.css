@@ -13,7 +13,9 @@
   margin: 0 auto;
   padding: 56px 150px 72px;
   border-radius: 20px;
-  background: #effff8;
+  /* Soft "sunrise" sweep -- mint into warm gold into pale sky blue -- nodding
+     to the Chirayu sun mark without competing with the navy copy on top. */
+  background: linear-gradient(120deg, #e2fff1 0%, #fff8df 52%, #e9f3ff 100%);
   color: #18314a;
 }
 
