@@ -248,12 +248,11 @@
 
 /* Top Job Roles panel */
 .role-tiles-panel {
-  margin: 40px 0 26px;
+  margin: 0 0 26px;
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
   padding: 28px;
-  box-shadow: 0 10px 30px rgba(15, 41, 66, 0.06);
 }
 
 .role-tiles-tabs {
