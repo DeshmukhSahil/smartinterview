@@ -312,11 +312,15 @@ export default function HiringApplication() {
   }, [allCities]);
   const visibleCampaigns = useMemo(() => {
     const q = roleQuery.trim().toLowerCase();
-    return campaigns.filter(role => {
-      const matchesQuery = !q || role.role.toLowerCase().includes(q) || role.locations.some(l => l.toLowerCase().includes(q));
-      const matchesCity = !cityFilter || role.locations.includes(cityFilter);
-      return matchesQuery && matchesCity;
-    });
+    return campaigns
+      .filter(role => {
+        const matchesQuery = !q || role.role.toLowerCase().includes(q) || role.locations.some(l => l.toLowerCase().includes(q));
+        const matchesCity = !cityFilter || role.locations.includes(cityFilter);
+        return matchesQuery && matchesCity;
+      })
+      // Open roles first, closed roles last; alphabetical order (already the
+      // fetch order) is preserved within each group since sort is stable.
+      .sort((a, b) => Number(b.is_open) - Number(a.is_open));
   }, [campaigns, roleQuery, cityFilter]);
   const totalActiveJobs = campaigns.length;
   const yearsLabel = (role: Pick<PublicCampaign, "min_years" | "max_years">) =>
@@ -637,13 +641,13 @@ export default function HiringApplication() {
                         setTouched({});
                         invalidate();
                       }}
-                      className={`role-tile ${selected === role.id ? "selected" : ""}`}
+                      className={`role-tile ${selected === role.id ? "selected" : ""} ${role.is_open ? "is-open" : "is-closed"}`}
                     >
-                      <span className="role-tile-icon"><Icon size={26} /></span>
-                      <strong>{role.role}</strong>
-                      <span className={role.is_open ? "role-tile-open-badge" : "role-tile-closed-badge"}>
+                      <span className={role.is_open ? "role-tile-ribbon role-tile-ribbon-open" : "role-tile-ribbon role-tile-ribbon-closed"}>
                         {role.is_open ? "Open" : "Closed"}
                       </span>
+                      <span className="role-tile-icon"><Icon size={26} /></span>
+                      <strong>{role.role}</strong>
                       <span className="role-tile-count">
                         {role.locations.length === 1 ? role.locations[0] : `${role.locations.length} locations`}
                       </span>
