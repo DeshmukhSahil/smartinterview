@@ -310,24 +310,6 @@
   background: #dcfce7;
 }
 
-.role-tile-viewall {
-  background: #f4b400;
-  border-color: #f4b400;
-  color: #18314a;
-  justify-content: center;
-}
-
-.role-tile-viewall:hover:not(:disabled) {
-  background: #ffc933;
-  border-color: #ffc933;
-  box-shadow: 0 10px 24px rgba(244, 180, 0, 0.3);
-}
-
-.role-tile-viewall .role-tile-icon {
-  background: rgba(255, 255, 255, 0.55);
-  color: #18314a;
-}
-
 /* City filter bar */
 .city-bar-panel {
   margin: 0 0 26px;

@@ -14,7 +14,6 @@ import {
   Headset,
   Laptop,
   Code2,
-  Grid3x3,
   Landmark,
   ArrowLeft,
   Building2,
@@ -272,7 +271,6 @@ export default function HiringApplication() {
   const [campaigns, setCampaigns] = useState<PublicCampaign[]>([]);
   const [roleQuery, setRoleQuery] = useState("");
   const [cityFilter, setCityFilter] = useState("");
-  const [showAllRoles, setShowAllRoles] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState("");
   const [viewStage, setViewStage] = useState<"detail" | "form">("detail");
@@ -319,7 +317,6 @@ export default function HiringApplication() {
       return matchesQuery && matchesCity;
     });
   }, [campaigns, roleQuery, cityFilter]);
-  const shownCampaigns = showAllRoles ? visibleCampaigns : visibleCampaigns.slice(0, 11);
   const totalActiveJobs = campaigns.length;
   const yearsLabel = (role: Pick<PublicCampaign, "min_years" | "max_years">) =>
     `${role.min_years}${role.max_years !== null ? ` - ${role.max_years}` : "+"} years`;
@@ -611,7 +608,7 @@ export default function HiringApplication() {
               )}
 
               <div className="role-tiles-grid">
-                {shownCampaigns.map(role => {
+                {visibleCampaigns.map(role => {
                   const Icon = roleIcon(role.role);
                   return (
                     <button
@@ -640,16 +637,6 @@ export default function HiringApplication() {
                     </button>
                   );
                 })}
-                {!showAllRoles && visibleCampaigns.length > shownCampaigns.length && (
-                  <button
-                    type="button"
-                    className="role-tile role-tile-viewall"
-                    onClick={() => setShowAllRoles(true)}
-                  >
-                    <span className="role-tile-icon"><Grid3x3 size={26} /></span>
-                    <strong>View All</strong>
-                  </button>
-                )}
               </div>
             </section>
           )}
