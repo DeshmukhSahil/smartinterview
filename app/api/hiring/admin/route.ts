@@ -36,6 +36,20 @@ export async function POST(r: Request) {
       if (link.error) throw link.error;
       return Response.json({ url: link.data.signedUrl }, { headers: cors(r) });
     }
+    if (body.delete_id) {
+      const id = (await import("zod")).z.string().uuid().parse(body.delete_id);
+      // Refuse to delete a campaign that already has candidate applications —
+      // that history must stay intact. Closing (is_open=false) is the correct
+      // way to stop new applications on a campaign that's already been used.
+      const existing = await erp().from("hiring_applications").select("id", { count: "exact", head: true }).eq("campaign_id", id);
+      if (existing.error) throw existing.error;
+      if ((existing.count || 0) > 0) {
+        throw new Error(`This campaign has ${existing.count} candidate application(s) and cannot be deleted. Set it to Closed instead to stop accepting new applications.`);
+      }
+      const del = await erp().from("hiring_campaigns").delete().eq("id", id);
+      if (del.error) throw del.error;
+      return Response.json({ success: true }, { headers: cors(r) });
+    }
     const parsed = campaignSchema.safeParse(body);
     if (!parsed.success) return Response.json({ error: parsed.error.issues.map(i => i.message).join("; ") }, { status: 400, headers: cors(r) });
     const { id, ...values } = parsed.data;

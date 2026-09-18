@@ -29,7 +29,6 @@ import {
 } from "lucide-react";
 import type { Campaign } from "@/lib/hiring/schema";
 import Navbar from "@/components/Navbar";
-import GlitterBackground from "./GlitterBackground";
 import "./hiring.css";
 import { solarFonts } from "./SolarIntro";
 import "./solar-grid.css";
@@ -506,7 +505,6 @@ export default function HiringApplication() {
     <>
       <Navbar />
       <main className={`hiring-page solar-hiring ${solarFonts}`}>
-      <GlitterBackground />
       {receipt ? (
         <section className="hiring-panel" aria-live="polite">
           <span className="hiring-eyebrow">APPLICATION RECEIVED</span>
