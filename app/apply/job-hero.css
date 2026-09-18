@@ -356,13 +356,6 @@
   margin: 0 0 26px;
 }
 
-.city-bar-panel h2 {
-  font-size: 18px;
-  font-weight: 700;
-  color: #18314a;
-  margin: 0 0 16px;
-}
-
 .city-bar-slider {
   display: flex;
   align-items: center;
@@ -464,9 +457,6 @@
   margin: 0 0 26px;
   padding: 40px 48px;
   background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(15, 41, 66, 0.06);
   overflow: hidden;
 }
 

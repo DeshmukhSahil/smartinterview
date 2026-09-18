@@ -656,7 +656,9 @@ export default function HiringApplication() {
 
           {!c && !loading && allCities.length > 0 && (
             <section className="city-bar-panel">
-              <h2>Browse roles by city</h2>
+              <div className="role-tiles-tabs">
+                <span className="current">Browse roles by city</span>
+              </div>
               <div className="city-bar-slider">
                 <button
                   type="button"
