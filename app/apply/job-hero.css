@@ -249,7 +249,7 @@
 /* Top Job Roles panel */
 .role-tiles-panel {
   margin: 0 0 26px;
-  background: white;
+  background: rgba(255, 255, 255, 0);
   border-radius: 16px;
   padding: 28px;
 }
@@ -483,8 +483,7 @@
   gap: 32px;
   margin: 0 0 26px;
   padding: 40px 48px;
-  background: white;
-  overflow: hidden;
+  background: rgba(255, 255, 255, 0);
 }
 
 .job-alerts-text {
@@ -537,6 +536,12 @@
   width: 280px;
   display: flex;
   justify-content: center;
+  /* Bottom-anchored within the row and bled past the panel's own bottom
+     padding, so the figure (already cropped mid-torso in the source image)
+     reads as standing right at the section's base near the footer divider
+     below, instead of floating in the middle with a visible gap under it. */
+  align-self: flex-end;
+  margin-bottom: -70px;
 }
 
 .job-alerts-image::before {
@@ -594,6 +599,11 @@
   }
   .job-alerts-image {
     width: 200px;
+    /* Stacked column layout here (image renders above the text via
+       column-reverse), so the desktop bottom-bleed trick doesn't apply --
+       align-self would instead shift it sideways. Reset both. */
+    align-self: center;
+    margin-bottom: 0;
   }
   .job-alerts-bubble {
     right: 8px;
