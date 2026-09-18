@@ -4,7 +4,7 @@
   left: 0;
   z-index: 9999;
   width: 100%;
-  height: 100px;
+  height: 72px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -19,7 +19,6 @@
   background: #ffffff !important;
   border-bottom: 1px solid rgba(220, 229, 239, 0.9) !important;
   box-shadow: 0 4px 20px rgba(7, 84, 155, 0.06) !important;
-  height: 72px !important;
 }
 
 .navbarInner {
@@ -47,37 +46,22 @@
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  height: 80px;
+  height: 56px;
   width: 220px;
   overflow: visible;
-  transition: height 0.35s cubic-bezier(0.25, 1, 0.5, 1);
-}
-
-.scrolled .logoWrapper {
-  height: 56px;
 }
 
 .logoImg {
   position: absolute;
   top: 50%;
   left: 0;
-  height: 220px !important;
-  width: 220px !important;
+  height: 175px !important;
+  width: 175px !important;
   object-fit: contain;
   display: block;
   pointer-events: none;
-  transform: translateY(-50%) scale(1);
-  transition:
-    opacity 0.35s cubic-bezier(0.25, 1, 0.5, 1),
-    transform 0.35s cubic-bezier(0.25, 1, 0.5, 1),
-    height 0.35s cubic-bezier(0.25, 1, 0.5, 1),
-    width 0.35s cubic-bezier(0.25, 1, 0.5, 1);
-}
-
-.scrolled .logoImg {
-  height: 175px !important;
-  width: 175px !important;
   transform: translateY(-50%) scale(0.95);
+  transition: opacity 0.35s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .navLinks {
@@ -334,9 +318,6 @@
   }
   .navbar {
     padding: 0 1.25rem;
-    height: 80px;
-  }
-  .scrolled {
-    height: 64px !important;
+    height: 64px;
   }
 }
