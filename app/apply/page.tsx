@@ -517,6 +517,12 @@ export default function HiringApplication() {
         <>
           {!c && (
             <section className="job-hero" id="opportunities">
+              <img
+                src={`${BASE_PATH}/brand/hero-hex-corner.png`}
+                alt=""
+                aria-hidden="true"
+                className="job-hero-hex-corner"
+              />
               <div className="job-hero-grid">
                 <div className="job-hero-text">
                   <h1>Find your next role at Chirayu Power</h1>

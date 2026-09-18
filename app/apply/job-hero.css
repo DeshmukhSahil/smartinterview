@@ -8,6 +8,7 @@
      with a visible gutter left and right instead of running to the
      viewport edge. Narrower than the page itself so the image sits close
      to the search bar instead of drifting off to a distant right edge. */
+  position: relative;
   max-width: 1400px;
   margin: 0 auto;
   padding: 56px 150px 72px;
@@ -16,7 +17,27 @@
   color: #18314a;
 }
 
+/* Purely decorative corner flourish; sits behind the search bar/copy and
+   never intercepts clicks. No overflow:hidden on .job-hero itself -- that
+   would also clip the "Select City" dropdown, which can extend below the
+   hero's own box. Rounded on its own bottom-left corner instead, to match
+   .job-hero's radius without needing to clip the whole container. */
+.job-hero-hex-corner {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 260px;
+  height: auto;
+  max-height: 100%;
+  opacity: 0.9;
+  border-bottom-left-radius: 20px;
+  pointer-events: none;
+  user-select: none;
+}
+
 .job-hero-grid {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 0px;
@@ -181,6 +202,15 @@
   }
   .job-hero-search {
     margin: 0 auto;
+  }
+  .job-hero-hex-corner {
+    width: 160px;
+  }
+}
+
+@media (max-width: 520px) {
+  .job-hero-hex-corner {
+    display: none;
   }
 }
 
