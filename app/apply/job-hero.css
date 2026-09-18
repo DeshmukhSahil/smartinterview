@@ -24,10 +24,9 @@
    overflow:hidden on .job-hero itself -- that would also clip the "Select
    City" dropdown, which can extend below the hero's own box. The source art
    clusters toward its own bottom-left corner, so each instance is flipped
-   to pull that cluster into the correct top corner of the hero. */
+   to pull that cluster into the right corner of the hero. */
 .job-hero-hex-corner {
   position: absolute;
-  top: 0;
   width: 200px;
   height: auto;
   max-height: 60%;
@@ -37,13 +36,15 @@
 }
 
 .job-hero-hex-top-left {
+  top: 0;
   left: 0;
   transform: scaleY(-1);
 }
 
-.job-hero-hex-top-right {
+.job-hero-hex-bottom-right {
+  bottom: 0;
   right: 0;
-  transform: scale(-1, -1);
+  transform: scaleX(-1);
 }
 
 .job-hero-grid {

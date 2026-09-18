@@ -527,7 +527,7 @@ export default function HiringApplication() {
                 src={`${BASE_PATH}/brand/hero-hex-corner.png`}
                 alt=""
                 aria-hidden="true"
-                className="job-hero-hex-corner job-hero-hex-top-right"
+                className="job-hero-hex-corner job-hero-hex-bottom-right"
               />
               <div className="job-hero-grid">
                 <div className="job-hero-text">
