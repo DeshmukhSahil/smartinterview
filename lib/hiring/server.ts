@@ -108,7 +108,12 @@ export async function retakeInterview(sourceId: string) {
 export async function activeCampaign(id: string) {
   const { data, error } = await erp().from("hiring_campaigns").select("*").eq("id", id).eq("active", true).single();
   if (error || !data) throw new Error("Campaign is not available");
-  return { ...campaignSchema.parse(data), id: data.id as string };
+  const campaign = { ...campaignSchema.parse(data), id: data.id as string };
+  // A closed role stays published (visible, old links keep resolving) but no
+  // longer accepts new submissions — distinct error from "not available" so
+  // candidates understand the role existed rather than seeing a dead link.
+  if (!campaign.is_open) throw new Error("This position is no longer accepting applications");
+  return campaign;
 }
 const FALLBACK_SCREENING_MODELS = [
   "nex-agi/nex-n2.5-mini:free",

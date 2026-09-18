@@ -290,6 +290,17 @@
   color: #60768b;
 }
 
+.role-tile-closed-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #9a3412;
+  background: #ffedd5;
+  padding: 2px 8px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
 .role-tile-viewall {
   background: #f4b400;
   border-color: #f4b400;
@@ -320,10 +331,57 @@
   margin: 0 0 16px;
 }
 
+.city-bar-slider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .city-bar {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 14px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scroll-snap-type: x proximity;
+  padding: 2px 2px 10px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.city-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.city-bar:focus-visible {
+  outline: 2px solid #07549b;
+  outline-offset: 4px;
+  border-radius: 8px;
+}
+
+.city-bar-arrow {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1.5px solid #e2e8f0;
+  background: white;
+  color: #18314a;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+}
+
+.city-bar-arrow:hover:not(:disabled) {
+  border-color: #07549b;
+  color: #07549b;
+  box-shadow: 0 4px 14px rgba(7, 84, 155, 0.15);
+}
+
+.city-bar-arrow:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .city-tile {
@@ -332,6 +390,8 @@
   align-items: center;
   gap: 8px;
   width: 120px;
+  flex-shrink: 0;
+  scroll-snap-align: start;
   padding: 18px 10px;
   border: 1.5px solid #e2e8f0;
   border-radius: 12px;

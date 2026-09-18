@@ -12,6 +12,11 @@ export const campaignSchema = z.object({
   role: z.string().trim().min(2).max(150),
   interview_mode: z.enum(["ai_assisted", "one_on_one"]).default("ai_assisted"),
   active: z.boolean(),
+  // Independent of `active` (published/visible at all): whether a published
+  // role is still accepting applications. A closed-but-active role stays
+  // visible on the careers portal (old links, employer branding, SEO) but
+  // is labeled "Closed" and blocks new submissions.
+  is_open: z.boolean().default(true),
   locations: z.array(z.string().trim().min(1).max(100)).max(100),
   description: z.string().trim().min(1).max(5000),
   knowledge: z.string().trim().min(20).max(20000),

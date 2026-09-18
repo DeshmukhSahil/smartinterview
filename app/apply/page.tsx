@@ -24,6 +24,8 @@ import {
   Factory,
   Warehouse,
   Castle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import type { Campaign } from "@/lib/hiring/schema";
 import Navbar from "@/components/Navbar";
@@ -53,6 +55,7 @@ type PublicCampaign = Pick<
   | "qualifications"
   | "benefits"
   | "job_code"
+  | "is_open"
 > & { id: string };
 
 // Best-effort icon per role title, purely decorative -- keyword match against
@@ -282,12 +285,32 @@ export default function HiringApplication() {
   const [receipt, setReceipt] = useState<{ reference: string; email_status: string } | null>(null);
   const form = useRef<HTMLFormElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const cityBarRef = useRef<HTMLDivElement>(null);
+  const [canScrollCitiesLeft, setCanScrollCitiesLeft] = useState(false);
+  const [canScrollCitiesRight, setCanScrollCitiesRight] = useState(false);
 
   const c = campaigns.find(c => c.id === selected);
   const allCities = useMemo(
     () => [...new Set(campaigns.flatMap(role => role.locations))].sort(),
     [campaigns]
   );
+
+  function updateCityBarScrollState() {
+    const el = cityBarRef.current;
+    if (!el) return;
+    setCanScrollCitiesLeft(el.scrollLeft > 4);
+    setCanScrollCitiesRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 4);
+  }
+  function scrollCityBar(direction: 1 | -1) {
+    cityBarRef.current?.scrollBy({ left: direction * cityBarRef.current.clientWidth * 0.85, behavior: "smooth" });
+  }
+  function handleCityBarKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key === "ArrowRight") { e.preventDefault(); scrollCityBar(1); }
+    else if (e.key === "ArrowLeft") { e.preventDefault(); scrollCityBar(-1); }
+  }
+  useEffect(() => {
+    updateCityBarScrollState();
+  }, [allCities]);
   const visibleCampaigns = useMemo(() => {
     const q = roleQuery.trim().toLowerCase();
     return campaigns.filter(role => {
@@ -608,6 +631,7 @@ export default function HiringApplication() {
                     >
                       <span className="role-tile-icon"><Icon size={26} /></span>
                       <strong>{role.role}</strong>
+                      {!role.is_open && <span className="role-tile-closed-badge">Closed</span>}
                       <span className="role-tile-count">
                         {role.locations.length === 1 ? role.locations[0] : `${role.locations.length} locations`}
                       </span>
@@ -631,25 +655,53 @@ export default function HiringApplication() {
           {!c && !loading && allCities.length > 0 && (
             <section className="city-bar-panel">
               <h2>Browse roles by city</h2>
-              <div className="city-bar">
-                {allCities.map(city => {
-                  const Icon = cityIcon(city);
-                  return (
-                    <button
-                      type="button"
-                      key={city}
-                      className={`city-tile ${cityFilter === city ? "selected" : ""}`}
-                      aria-pressed={cityFilter === city}
-                      onClick={() => {
-                        setCityFilter(prev => (prev === city ? "" : city));
-                        document.getElementById("role-tiles")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                      }}
-                    >
-                      <span className="city-tile-icon"><Icon size={24} /></span>
-                      <span>{city}</span>
-                    </button>
-                  );
-                })}
+              <div className="city-bar-slider">
+                <button
+                  type="button"
+                  className="city-bar-arrow city-bar-arrow-left"
+                  aria-label="Scroll cities left"
+                  disabled={!canScrollCitiesLeft}
+                  onClick={() => scrollCityBar(-1)}
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                <div
+                  className="city-bar"
+                  ref={cityBarRef}
+                  tabIndex={0}
+                  role="group"
+                  aria-label="Browse roles by city. Use the left and right arrow keys to scroll."
+                  onScroll={updateCityBarScrollState}
+                  onKeyDown={handleCityBarKeyDown}
+                >
+                  {allCities.map(city => {
+                    const Icon = cityIcon(city);
+                    return (
+                      <button
+                        type="button"
+                        key={city}
+                        className={`city-tile ${cityFilter === city ? "selected" : ""}`}
+                        aria-pressed={cityFilter === city}
+                        onClick={() => {
+                          setCityFilter(prev => (prev === city ? "" : city));
+                          document.getElementById("role-tiles")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                        }}
+                      >
+                        <span className="city-tile-icon"><Icon size={24} /></span>
+                        <span>{city}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  type="button"
+                  className="city-bar-arrow city-bar-arrow-right"
+                  aria-label="Scroll cities right"
+                  disabled={!canScrollCitiesRight}
+                  onClick={() => scrollCityBar(1)}
+                >
+                  <ChevronRight size={20} />
+                </button>
               </div>
             </section>
           )}
@@ -663,6 +715,9 @@ export default function HiringApplication() {
                     <div className="job-detail-title-line">
                       <h1>{c.role}</h1>
                       <span className="job-detail-jobid">Job ID: {c.job_code || c.id.slice(0, 8).toUpperCase()}</span>
+                      {!c.is_open && (
+                        <span className="job-detail-closed-badge" role="status">Closed</span>
+                      )}
                     </div>
                     <div className="job-detail-meta">
                       <span><Building2 size={14} aria-hidden="true" /> {c.workplace_type}</span>
@@ -677,8 +732,15 @@ export default function HiringApplication() {
                   <button type="button" className="job-detail-back" onClick={() => setSelected("")}>
                     <ArrowLeft size={15} aria-hidden="true" /> See all jobs
                   </button>
-                  <button type="button" className="job-detail-apply" onClick={() => setViewStage("form")}>
-                    Apply
+                  <button
+                    type="button"
+                    className="job-detail-apply"
+                    disabled={!c.is_open}
+                    aria-disabled={!c.is_open}
+                    title={c.is_open ? undefined : "This position is no longer accepting applications"}
+                    onClick={() => c.is_open && setViewStage("form")}
+                  >
+                    {c.is_open ? "Apply" : "Position Closed"}
                   </button>
                 </div>
               </div>
