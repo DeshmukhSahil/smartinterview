@@ -19,22 +19,31 @@
   color: #18314a;
 }
 
-/* Purely decorative corner flourish; sits behind the search bar/copy and
-   never intercepts clicks. No overflow:hidden on .job-hero itself -- that
-   would also clip the "Select City" dropdown, which can extend below the
-   hero's own box. Rounded on its own bottom-left corner instead, to match
-   .job-hero's radius without needing to clip the whole container. */
+/* Purely decorative flourishes flanking the heading, just under the navbar.
+   Sit behind the copy/search bar and never intercept clicks. No
+   overflow:hidden on .job-hero itself -- that would also clip the "Select
+   City" dropdown, which can extend below the hero's own box. The source art
+   clusters toward its own bottom-left corner, so each instance is flipped
+   to pull that cluster into the correct top corner of the hero. */
 .job-hero-hex-corner {
   position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 260px;
+  top: 0;
+  width: 200px;
   height: auto;
-  max-height: 100%;
-  opacity: 0.9;
-  border-bottom-left-radius: 20px;
+  max-height: 60%;
+  opacity: 0.8;
   pointer-events: none;
   user-select: none;
+}
+
+.job-hero-hex-top-left {
+  left: 0;
+  transform: scaleY(-1);
+}
+
+.job-hero-hex-top-right {
+  right: 0;
+  transform: scale(-1, -1);
 }
 
 .job-hero-grid {

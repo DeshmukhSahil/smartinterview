@@ -521,7 +521,13 @@ export default function HiringApplication() {
                 src={`${BASE_PATH}/brand/hero-hex-corner.png`}
                 alt=""
                 aria-hidden="true"
-                className="job-hero-hex-corner"
+                className="job-hero-hex-corner job-hero-hex-top-left"
+              />
+              <img
+                src={`${BASE_PATH}/brand/hero-hex-corner.png`}
+                alt=""
+                aria-hidden="true"
+                className="job-hero-hex-corner job-hero-hex-top-right"
               />
               <div className="job-hero-grid">
                 <div className="job-hero-text">
