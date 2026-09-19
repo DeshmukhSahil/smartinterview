@@ -11,7 +11,7 @@ import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 function invitationDestination() {
   const path = sessionStorage.getItem("interview_return_path");
   sessionStorage.removeItem("interview_return_path");
-  return path && /^\/interview\/[^/]+$/.test(path) ? path : "/";
+  return path && /^\/portal\/interview\/[^/]+$/.test(path) ? path : "/portal";
 }
 
 export default function LoginPage() {
@@ -20,7 +20,24 @@ export default function LoginPage() {
   const [passwordId, setPasswordId] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // If already logged in, redirect to home
+  // A valid emailed link (/interview/[id]/[token]) resolves the candidate's
+  // credentials server-side and hands them over here via sessionStorage --
+  // never via the URL, so they don't end up in browser history or logs.
+  // Read-and-remove so a refresh doesn't keep re-filling stale values.
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("login_prefill");
+      if (!raw) return;
+      sessionStorage.removeItem("login_prefill");
+      const prefill = JSON.parse(raw) as { email?: unknown; passwordId?: unknown };
+      if (typeof prefill.email === "string") setEmail(prefill.email);
+      if (typeof prefill.passwordId === "string") setPasswordId(prefill.passwordId);
+    } catch {
+      // Malformed or unavailable storage: fall back to the empty form.
+    }
+  }, []);
+
+  // If already logged in, redirect to the candidate portal
   useEffect(() => {
     const storedEmail = localStorage.getItem("candidate_email");
     const storedPass = localStorage.getItem("password_id");

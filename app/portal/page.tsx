@@ -144,7 +144,7 @@ export default function Home() {
               </div>
               <div>
                 <h2>Profile {profile}%</h2>
-                <Link href="/profile">
+                <Link href="/portal/profile">
                   Review your details <ArrowRight size={15} />
                 </Link>
                 <small>Includes browser-only notes</small>
@@ -222,7 +222,7 @@ export default function Home() {
                 </div>
                 {report && (
                   <Link
-                    href={"/interview/" + report.interview_id + "/feedback"}
+                    href={"/portal/interview/" + report.interview_id + "/feedback"}
                   >
                     View feedback <ArrowRight size={15} />
                   </Link>
@@ -375,7 +375,7 @@ export default function Home() {
                   <div className={s.buttons}>
                     <Link
                       className="hire-button"
-                      href={"/interview/" + next.id}
+                      href={"/portal/interview/" + next.id}
                     >
                       Check details <ArrowRight size={16} />
                     </Link>
@@ -459,7 +459,7 @@ export default function Home() {
             >
               <div className={s.sectionTop}>
                 <h2>Your interviews</h2>
-                <Link href="/allinterviews">
+                <Link href="/portal/allinterviews">
                   View all interviews <ArrowRight size={15} />
                 </Link>
               </div>
@@ -511,11 +511,11 @@ export default function Home() {
                             </td>
                             <td data-label="Action">
                               {hasReport ? (
-                                <Link href={"/interview/" + i.id + "/feedback"}>
+                                <Link href={"/portal/interview/" + i.id + "/feedback"}>
                                   View feedback <ArrowRight size={14} />
                                 </Link>
                               ) : state.group === "upcoming" ? (
-                                <Link href={"/interview/" + i.id}>
+                                <Link href={"/portal/interview/" + i.id}>
                                   Check details <ArrowRight size={14} />
                                 </Link>
                               ) : (

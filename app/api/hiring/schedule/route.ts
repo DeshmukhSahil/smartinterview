@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { requireHR, failure, cors, interviewDb, sendEmail, env } from "@/lib/hiring/server";
+import { requireHR, failure, cors, interviewDb, sendEmail } from "@/lib/hiring/server";
+import { interviewLoginUrl } from "@/lib/hiring/link";
 import { createTeamsMeeting } from "@/lib/teams";
 
 export const dynamic = "force-dynamic";
@@ -39,7 +40,7 @@ export async function POST(r: Request) {
     }).eq("id", parsed.interview_id);
     if (updated.error) throw updated.error;
 
-    const loginUrl = `${env("HIRING_PUBLIC_URL").replace(/\/$/, "")}/login`;
+    const loginUrl = interviewLoginUrl(parsed.interview_id, interview.password_id);
     const when = start.toLocaleString("en-IN", { timeZone: parsed.time_zone, dateStyle: "full", timeStyle: "short" });
     await sendEmail({
       to: [interview.candidate_email],

@@ -100,7 +100,7 @@ You are an interviewer representing Chirayu Power. Keep these values and facts i
       const data = await response.json();
 
       if (data.success) {
-        router.push(`/interview/${data.id}`);
+        router.push(`/portal/interview/${data.id}`);
       } else {
         alert("Failed to save interview");
       }

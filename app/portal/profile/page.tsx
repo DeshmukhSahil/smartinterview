@@ -257,7 +257,7 @@ export default function ProfilePage() {
               </p>
             </div>
           </section>
-          <Link href="/allinterviews" className={s.asideAction}>
+          <Link href="/portal/allinterviews" className={s.asideAction}>
             Back to your interviews <ArrowRight size={17} />
           </Link>
         </aside>

@@ -33,7 +33,7 @@ export default function Layout({ children }: { children: ReactNode }) {
     help.current?.close();
     if (!email || !pass) {
       setAuthenticated(false);
-      if (/^\/interview\/[^/]+$/.test(pathname))
+      if (/^\/portal\/interview\/[^/]+$/.test(pathname))
         sessionStorage.setItem("interview_return_path", pathname);
       router.replace("/login");
     } else {
@@ -68,7 +68,7 @@ export default function Layout({ children }: { children: ReactNode }) {
     router.replace("/login");
   };
   const interviewPage =
-    /^\/interview\/[^/]+\/?$/.test(pathname) && !pathname.endsWith("/create");
+    /^\/portal\/interview\/[^/]+\/?$/.test(pathname) && !pathname.endsWith("/create");
 
   return (
     <div className={styles.shell} data-candidate-portal>
@@ -78,18 +78,18 @@ export default function Layout({ children }: { children: ReactNode }) {
       <header className={styles.header}>
         <div className={styles.headerInner}>
           <div className={styles.breadcrumb}>
-            <Link href="/">Home</Link>
+            <Link href="/portal">Home</Link>
             <ChevronRight size={16} />
             <span>
-              {pathname === "/"
+              {pathname === "/portal"
                 ? "Overview"
-                : pathname === "/profile"
+                : pathname === "/portal/profile"
                   ? "My profile"
                   : "My interviews"}
             </span>
           </div>
           <Link
-            href="/"
+            href="/portal"
             className={styles.brand}
             aria-label="Chirayu Hire home"
           >
@@ -97,14 +97,14 @@ export default function Layout({ children }: { children: ReactNode }) {
             <span>Hire</span>
           </Link>
           <nav className={styles.navigation} aria-label="Candidate navigation">
-            <Link href="/" aria-current={pathname === "/" ? "page" : undefined}>
+            <Link href="/portal" aria-current={pathname === "/portal" ? "page" : undefined}>
               Home
             </Link>
             <Link
-              href="/allinterviews"
+              href="/portal/allinterviews"
               aria-current={
-                pathname === "/allinterviews" ||
-                pathname.startsWith("/interview/")
+                pathname === "/portal/allinterviews" ||
+                pathname.startsWith("/portal/interview/")
                   ? "page"
                   : undefined
               }
@@ -112,8 +112,8 @@ export default function Layout({ children }: { children: ReactNode }) {
               Interviews
             </Link>
             <Link
-              href="/profile"
-              aria-current={pathname === "/profile" ? "page" : undefined}
+              href="/portal/profile"
+              aria-current={pathname === "/portal/profile" ? "page" : undefined}
             >
               Profile
             </Link>
@@ -141,7 +141,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             </summary>
             <div className={styles.accountPanel}>
               <p>{name}</p>
-              <Link href="/profile">
+              <Link href="/portal/profile">
                 <UserRound size={18} />
                 Your profile
               </Link>
@@ -155,7 +155,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       </header>
       <aside className={styles.sidebar} aria-label="Candidate sidebar">
         <Link
-          href="/"
+          href="/portal"
           className={styles.sidebarBrand}
           aria-label="Chirayu Hire home"
         >
@@ -163,15 +163,15 @@ export default function Layout({ children }: { children: ReactNode }) {
           <span>Hire</span>
         </Link>
         <nav aria-label="Sidebar navigation">
-          <Link href="/" aria-current={pathname === "/" ? "page" : undefined}>
+          <Link href="/portal" aria-current={pathname === "/portal" ? "page" : undefined}>
             <House size={20} />
             Overview
           </Link>
           <Link
-            href="/allinterviews"
+            href="/portal/allinterviews"
             aria-current={
-              pathname === "/allinterviews" ||
-              pathname.startsWith("/interview/")
+              pathname === "/portal/allinterviews" ||
+              pathname.startsWith("/portal/interview/")
                 ? "page"
                 : undefined
             }
@@ -187,8 +187,8 @@ export default function Layout({ children }: { children: ReactNode }) {
             Applications<span className={styles.soon}>—</span>
           </button>
           <Link
-            href="/profile"
-            aria-current={pathname === "/profile" ? "page" : undefined}
+            href="/portal/profile"
+            aria-current={pathname === "/portal/profile" ? "page" : undefined}
           >
             <UserRound size={20} />
             My profile

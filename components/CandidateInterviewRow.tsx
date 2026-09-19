@@ -63,8 +63,8 @@ export default function CandidateInterviewRow({
           <Link
             href={
               hasReport && state.group === "completed"
-                ? `/interview/${interview.id}/feedback`
-                : `/interview/${interview.id}`
+                ? `/portal/interview/${interview.id}/feedback`
+                : `/portal/interview/${interview.id}`
             }
             aria-label={`${action}: ${interview.role}`}
             className={s.textLink}

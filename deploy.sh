@@ -16,7 +16,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-HEALTH_URL="https://careers.chirayupower.com/apply"
+HEALTH_URL="https://careers.chirayupower.com/"
 LABELS=(
   --label "traefik.enable=true"
   --label "traefik.http.routers.smartinterview.entrypoints=web,websecure"

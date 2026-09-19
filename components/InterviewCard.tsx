@@ -64,22 +64,22 @@ const InterviewCard = ({
   if (isOneOnOne) {
     if (interviewStatus === "completed") {
       badge = { label: "Completed", className: "bg-green-50 border-green-200 text-success-green" };
-      cta = { label: "View Summary", href: `/interview/${interviewId}`, icon: Award };
+      cta = { label: "View Summary", href: `/portal/interview/${interviewId}`, icon: Award };
     } else if (interviewStatus === "scheduled") {
       badge = { label: "Scheduled", className: "bg-blue-50 border-blue-200 text-primary-blue" };
-      cta = { label: "View & Join", href: `/interview/${interviewId}`, icon: CalendarClock };
+      cta = { label: "View & Join", href: `/portal/interview/${interviewId}`, icon: CalendarClock };
       if (scheduledAt) meta = `One-on-one · ${dayjs(scheduledAt).format("MMM D, h:mm A")}`;
     } else {
       badge = { label: "Awaiting Schedule", className: "bg-amber-50 border-amber-200 text-amber-600" };
-      cta = { label: "View Status", href: `/interview/${interviewId}`, icon: Clock3 };
+      cta = { label: "View Status", href: `/portal/interview/${interviewId}`, icon: Clock3 };
       meta = `One-on-one · Applied ${formattedDate}`;
     }
   } else if (feedback) {
     badge = { label: "Completed", className: "bg-green-50 border-green-200 text-success-green" };
-    cta = { label: "View Feedback", href: `/interview/${interviewId}/feedback`, icon: Award };
+    cta = { label: "View Feedback", href: `/portal/interview/${interviewId}/feedback`, icon: Award };
   } else {
     badge = { label: "Not Started", className: "bg-amber-50 border-amber-200 text-amber-600" };
-    cta = { label: "Take Interview", href: `/interview/${interviewId}`, icon: PlayCircle };
+    cta = { label: "Take Interview", href: `/portal/interview/${interviewId}`, icon: PlayCircle };
   }
 
   const Icon = isOneOnOne ? Users : TYPE_ICON[normalizedType] || Sparkles;

@@ -357,6 +357,7 @@
   box-sizing: border-box;
   padding: 26px 16px 22px;
   border: 0.1px solid #c56a4c;
+  border-right: 0.1px dashed #c56a4c !important;
   border-radius: 16px;
   background: #ffffff;
   clip-path: polygon(0 0, calc(100% - 60px) 0, 100% 60px, 100% 100%, 0 100%);

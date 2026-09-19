@@ -38,7 +38,7 @@ export const GoogleGeminiEffect = ({
   const [loader,setLoader] = React.useState(false);
   const loading = () => {
     setLoader(true);
-    router.push("/interview"); // <--- navigate after loading
+    router.push("/portal/interview"); // <--- navigate after loading
   };
 
 

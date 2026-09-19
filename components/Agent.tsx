@@ -278,7 +278,7 @@ const FeedbackModal = ({
           </p>
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <Link
-              href="/"
+              href="/portal"
               className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-primary-blue text-primary-blue text-xs font-bold hover:bg-primary-blue/5 transition-colors"
             >
               <ArrowLeft size={13} />
@@ -286,7 +286,7 @@ const FeedbackModal = ({
             </Link>
             {!isGenerating && (
               <Link
-                href={`/interview/${interviewId}`}
+                href={`/portal/interview/${interviewId}`}
                 className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-border-gray bg-white text-dark-100 text-xs font-bold hover:bg-gray-50 transition-colors"
               >
                 <RotateCcw size={13} />
@@ -295,7 +295,7 @@ const FeedbackModal = ({
             )}
             {feedback && (
               <Link
-                href={`/interview/${interviewId}/feedback`}
+                href={`/portal/interview/${interviewId}/feedback`}
                 className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary-blue text-white text-xs font-bold hover:bg-primary-blue/90 transition-colors shadow-sm"
               >
                 <ExternalLink size={13} />
@@ -730,7 +730,7 @@ STRICT RULES YOU MUST FOLLOW:
 
   const handleGenerateFeedback = async (msgs: SavedMessage[]) => {
     if (type === "generate") {
-      router.push("/");
+      router.push("/portal");
       return;
     }
 
@@ -816,7 +816,7 @@ STRICT RULES YOU MUST FOLLOW:
           isGenerating={isGeneratingFeedback}
           onClose={() => {
             setShowFeedbackModal(false);
-            router.push("/");
+            router.push("/portal");
           }}
         />
       )}

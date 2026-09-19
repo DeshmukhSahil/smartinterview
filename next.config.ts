@@ -19,6 +19,24 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   serverExternalPackages: ["pdf-parse", "@napi-rs/canvas"],
+  // The careers page moved from /apply to the site root, and the candidate
+  // portal from the root to /portal. Old bookmarks and already-sent invitation
+  // emails still point at the previous paths, so keep them working. Order
+  // matters: the literal /interview/create|preview must precede /interview/:id.
+  // /interview/:id/:token (the emailed sign-in link) is a real page, not a
+  // redirect; only its literal "feedback" form is legacy.
+  async redirects() {
+    return [
+      { source: "/apply", destination: "/", permanent: false },
+      { source: "/profile", destination: "/portal/profile", permanent: false },
+      { source: "/allinterviews", destination: "/portal/allinterviews", permanent: false },
+      { source: "/interview", destination: "/portal/interview", permanent: false },
+      { source: "/interview/create", destination: "/portal/interview/create", permanent: false },
+      { source: "/interview/preview", destination: "/portal/interview/preview", permanent: false },
+      { source: "/interview/:id/feedback", destination: "/portal/interview/:id/feedback", permanent: false },
+      { source: "/interview/:id", destination: "/portal/interview/:id", permanent: false },
+    ];
+  },
 };
 
 export default nextConfig;

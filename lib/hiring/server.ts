@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { createHash, randomBytes } from "node:crypto";
 import { campaignSchema, resultSchema, notesSchema, type Campaign, type InterviewNotes, type TranscriptTurn } from "./schema";
+import { interviewLoginUrl } from "./link";
 
 export function env(name: string) {
   const value = process.env[name];
@@ -91,7 +92,7 @@ export async function retakeInterview(sourceId: string) {
   const interview = created.data;
   let emailed = true;
   try {
-    const loginUrl = `${env("HIRING_PUBLIC_URL").replace(/\/$/, "")}/login`;
+    const loginUrl = interviewLoginUrl(interview.id, interview.password_id);
     const isOneOnOne = interview.mode === "one_on_one";
     const subject = "Chirayu Power — new interview access";
     const text = isOneOnOne
@@ -205,7 +206,7 @@ export async function deliver(id: string) {
     if (a.email_attempted_at && Date.now() - Date.parse(a.email_attempted_at) > 23 * 3600000) throw new Error("Email delivery requires manual review after the retry window");
     const attempted = await db.from("hiring_applications").update({ email_attempted_at: a.email_attempted_at || new Date().toISOString() }).eq("id", id);
     if (attempted.error) throw attempted.error;
-    const loginUrl = `${env("HIRING_PUBLIC_URL").replace(/\/$/, "")}/login`;
+    const loginUrl = interviewLoginUrl(interview!.id, interview!.password_id);
     const subject = isOneOnOne ? "Chirayu Power — application received, interview scheduling" : "Chirayu Power — application received and interview access";
     const text = isOneOnOne
       ? `Thank you for applying to Chirayu Power.\n\nWe have received your application for ${c.role}. This role is filled through a one-on-one interview with our HR team.\n\nLog in to your candidate portal to see your interview once it has been scheduled: ${loginUrl}\nLogin email: ${a.candidate.email}\nAccess password ID: ${interview!.password_id}\n\nKeep these credentials private. Portal access does not confirm selection or an offer.\n\nChirayu Power HR Team`

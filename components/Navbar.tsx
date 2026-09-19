@@ -15,7 +15,7 @@ const navItems: NavItem[] = [
   { label: "Home", href: "https://chirayupower.com" },
   { label: "Services", href: "https://chirayupower.com/services-solutions" },
   { label: "Case Study", href: "https://chirayupower.com/utility-scale-solar-projects" },
-  { label: "Careers", href: "/apply" },
+  { label: "Careers", href: "/" },
   { label: "Contact Us", href: "https://chirayupower.com/contact-us" },
 ];
 

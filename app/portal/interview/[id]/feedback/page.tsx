@@ -99,7 +99,7 @@ export default function FeedbackPage() {
 
         if (interviewErr || !interviewData) {
           console.error("Failed to load interview:", interviewErr);
-          router.replace("/");
+          router.replace("/portal");
           return;
         }
         setInterview(interviewData);
@@ -151,7 +151,7 @@ export default function FeedbackPage() {
       : null;
   return (
     <div className={s.page + " hire-page-enter"}>
-      <Link className={s.back} href="/allinterviews">
+      <Link className={s.back} href="/portal/allinterviews">
         <ArrowLeft size={16} /> Your interviews
       </Link>
       <header className={s.heading}>
@@ -254,7 +254,7 @@ export default function FeedbackPage() {
                 your invitation email if you have a question about this
                 assessment.
               </p>
-              <Link href="/allinterviews">
+              <Link href="/portal/allinterviews">
                 View interview history <ArrowRight size={16} />
               </Link>
             </aside>
@@ -308,10 +308,10 @@ export default function FeedbackPage() {
         </section>
       )}
       <div className={s.actions}>
-        <Link className="hire-button" href="/allinterviews">
+        <Link className="hire-button" href="/portal/allinterviews">
           Back to interviews <ArrowRight size={17} />
         </Link>
-        <Link className={s.back} href={"/interview/" + id}>
+        <Link className={s.back} href={"/portal/interview/" + id}>
           <RotateCcw size={16} /> {feedback ? "Retake interview" : "View interview"}
         </Link>
       </div>
