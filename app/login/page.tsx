@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { ArrowRight, Mic, Clock3 } from "lucide-react";
 import styles from "@/components/InterviewRoom.module.css";
 import { ChirayuLogo } from "@/components/ui/chirayu-logo";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 
 function invitationDestination() {
   const path = sessionStorage.getItem("interview_return_path");
@@ -56,44 +55,28 @@ export default function LoginPage() {
 
     try {
       setLoading(true);
-
-      // 1. Check if Supabase is unconfigured (for local mock testing)
-      if (!isSupabaseConfigured) {
-        if (email.trim().toLowerCase() === "candidate@mock.com" && passwordId.trim().toUpperCase() === "CP-MOCK") {
-          localStorage.setItem("candidate_email", "candidate@mock.com");
-          localStorage.setItem("password_id", "CP-MOCK");
-          localStorage.setItem("candidate_name", "Sahil Deshmukh (Mock)");
-          toast.success("Logged in with local mock credentials!");
-          router.push(invitationDestination());
-          return;
-        }
-        toast.error("Database unconfigured. Use email 'candidate@mock.com' and access code 'CP-MOCK' to sign in locally.");
-        return;
-      }
-
-      // 2. Perform DB check
       const cleanEmail = email.trim().toLowerCase();
       const cleanPass = passwordId.trim().toUpperCase();
 
-      const { data, error } = await supabase
-        .from("interviews")
-        .select("candidate_name, candidate_email, password_id")
-        .eq("candidate_email", cleanEmail)
-        .eq("password_id", cleanPass)
-        .limit(1);
+      const response = await fetch("/api/candidate/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: cleanEmail, passwordId: cleanPass }),
+      });
 
-      if (error) {
-        toast.error(error.message || "Failed to authenticate against the database.");
-        console.error("Auth error:", error);
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        toast.error(result.error || "Invalid credentials. Please verify your email and access code.");
         return;
       }
 
-      if (!data || data.length === 0) {
+      const candidate = result.candidate;
+      if (!candidate) {
         toast.error("Invalid credentials. Please verify your email and access code.");
         return;
       }
 
-      const candidate = data[0];
       localStorage.setItem("candidate_email", candidate.candidate_email || cleanEmail);
       localStorage.setItem("password_id", candidate.password_id || cleanPass);
       localStorage.setItem("candidate_name", candidate.candidate_name || "Candidate");

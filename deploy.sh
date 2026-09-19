@@ -59,7 +59,17 @@ if docker image inspect smartinterview:latest >/dev/null 2>&1; then
 fi
 
 echo "==> Building new image"
-docker build -t smartinterview:latest .
+BUILD_ARGS=()
+if [ -f .env ]; then
+  for var in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY NEXT_PUBLIC_ERP_SUPABASE_URL NEXT_PUBLIC_ERP_SUPABASE_ANON_KEY NEXT_BASE_PATH; do
+    val="$(grep "^${var}=" .env 2>/dev/null | head -n1 | cut -d '=' -f2- | tr -d '\r\n"' || true)"
+    if [ -n "$val" ]; then
+      BUILD_ARGS+=(--build-arg "${var}=${val}")
+    fi
+  done
+fi
+
+docker build "${BUILD_ARGS[@]}" -t smartinterview:latest .
 
 echo "==> Swapping container"
 docker stop smartinterview >/dev/null 2>&1 || true

@@ -87,13 +87,13 @@
   color: #0f2a4a;
 }
 
-.job-hero-text > p {
+.job-hero-text>p {
   font-size: 15px;
   color: #51687f;
   margin: 0 0 32px;
 }
 
-.job-hero-text > p strong {
+.job-hero-text>p strong {
   color: #07549b;
   font-weight: 700;
 }
@@ -201,6 +201,7 @@
 }
 
 @media (max-width: 900px) {
+
   /* .job-hero's 150px horizontal padding is sized for desktop's two-column
      grid; left unadjusted here it eats almost all the width on a phone,
      squeezing the heading/search bar into a sliver (real bug, not just a
@@ -209,25 +210,31 @@
   .job-hero {
     padding: 24px 32px 28px;
   }
+
   .job-hero-grid {
     flex-direction: column-reverse;
     text-align: center;
     gap: 4px;
   }
+
   .job-hero-text,
   .job-hero-image {
     flex: none;
     width: 100%;
   }
+
   .job-hero-image img {
     max-width: 140px;
   }
-  .job-hero-text > p {
+
+  .job-hero-text>p {
     margin-bottom: 18px;
   }
+
   .job-hero-search {
     margin: 0 auto;
   }
+
   .job-hero-hex-corner {
     width: 160px;
   }
@@ -244,22 +251,28 @@
     padding: 18px 16px 20px;
     border-radius: 16px;
   }
+
   .job-hero-image img {
     max-width: 110px;
   }
-  .job-hero-text > p {
+
+  .job-hero-text>p {
     margin-bottom: 14px;
   }
+
   .job-hero-search {
     flex-wrap: wrap;
     border-radius: 20px;
   }
+
   .job-hero-divider {
     display: none;
   }
+
   .job-hero-field {
     flex: 1 1 100%;
   }
+
   .job-hero-search-btn {
     flex: 1 1 100%;
     border-radius: 14px;
@@ -471,13 +484,16 @@
   .role-tiles-panel {
     padding: 18px;
   }
+
   .role-tiles-grid {
     grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
     gap: 10px;
   }
+
   .role-tile-card {
     padding: 18px 10px 16px;
   }
+
   .city-bar-panel {
     padding: 0 18px;
   }
@@ -582,7 +598,8 @@
   justify-content: space-between;
   gap: 32px;
   margin: 0 0 26px;
-  padding: 40px 48px;
+  padding: 40px;
+  padding-right: 300px;
   background: rgba(255, 255, 255, 0.699);
 }
 
@@ -660,7 +677,7 @@
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 260px;
+  min-width: 500px;
   height: auto;
 }
 
@@ -670,9 +687,11 @@
     text-align: center;
     padding: 32px 24px;
   }
+
   .job-alerts-text {
     max-width: none;
   }
+
   .job-alerts-image {
     width: 200px;
     /* Stacked column layout here (image renders above the text via
