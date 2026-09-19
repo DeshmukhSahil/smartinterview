@@ -1,5 +1,6 @@
 import { campaignSchema } from "@/lib/hiring/schema";
-import { cors, erp, failure, requireHR, deliver, retakeInterview } from "@/lib/hiring/server";
+import { cors, erp, failure, requireHR, deliver, retakeInterview, interviewDb } from "@/lib/hiring/server";
+import { interviewLoginUrl } from "@/lib/hiring/link";
 export const dynamic = "force-dynamic";
 export async function OPTIONS(r: Request) { return new Response(null, { status: 204, headers: cors(r) }); }
 export async function GET(r: Request) {
@@ -17,7 +18,23 @@ export async function GET(r: Request) {
 export async function POST(r: Request) {
   try {
     const body = await r.json();
-    await requireHR(r, body.resume_id ? "view" : "edit");
+    await requireHR(r, body.resume_id || body.link_ids ? "view" : "edit");
+    if (body.link_ids) {
+      // Candidate sign-in links (/interview/[id]/[token]) can only be minted
+      // server-side -- the token is keyed with a secret the ERP never sees --
+      // so the ERP's Candidate Credentials list asks for them here. "view" is
+      // enough: that list already shows every candidate's access code.
+      const { z } = await import("zod");
+      const ids = z.array(z.string().uuid()).max(1000).parse(body.link_ids);
+      const links: Record<string, string> = {};
+      // Chunked so the .in() filter's URL stays well under proxy length limits.
+      for (let i = 0; i < ids.length; i += 100) {
+        const { data, error } = await interviewDb().from("interviews").select("id,password_id").in("id", ids.slice(i, i + 100));
+        if (error) throw error;
+        for (const row of data || []) if (row.password_id) links[row.id] = interviewLoginUrl(row.id, row.password_id);
+      }
+      return Response.json({ links }, { headers: { ...cors(r), "Cache-Control": "no-store" } });
+    }
     if (body.retry_id) {
       const id = (await import("zod")).z.string().uuid().parse(body.retry_id);
       await deliver(id);
