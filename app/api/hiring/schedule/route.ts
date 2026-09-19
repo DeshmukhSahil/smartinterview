@@ -25,12 +25,14 @@ export async function POST(r: Request) {
 
     const start = new Date(parsed.scheduled_at);
     const end = new Date(start.getTime() + parsed.duration_minutes * 60000);
+    const loginUrl = interviewLoginUrl(parsed.interview_id, interview.password_id);
+    const when = start.toLocaleString("en-IN", { timeZone: parsed.time_zone, dateStyle: "full", timeStyle: "short" });
     const meeting = await createTeamsMeeting({
       subject: `Chirayu Power — ${interview.role} interview with ${interview.candidate_name}`,
       startISO: start.toISOString(), endISO: end.toISOString(), timeZone: parsed.time_zone,
       candidateEmail: interview.candidate_email, candidateName: interview.candidate_name,
       hrEmail: hr.email,
-      bodyText: `One-on-one interview for the ${interview.role} role at Chirayu Power.`,
+      bodyText: `Dear ${interview.candidate_name},\n\nWe are pleased to invite you to the interview for the ${interview.role} position at Chirayu Power.\n\n📅 Scheduled Time: ${when} (${parsed.time_zone})\n🔗 Candidate Portal: ${loginUrl}\n👤 Candidate ID: ${interview.candidate_email}\n🔑 Password ID: ${interview.password_id}\n\nPlease join the meeting at your scheduled time.\n\nBest regards,\nChirayu Power HR Team`,
     });
 
     const updated = await db.from("interviews").update({
@@ -40,8 +42,6 @@ export async function POST(r: Request) {
     }).eq("id", parsed.interview_id);
     if (updated.error) throw updated.error;
 
-    const loginUrl = interviewLoginUrl(parsed.interview_id, interview.password_id);
-    const when = start.toLocaleString("en-IN", { timeZone: parsed.time_zone, dateStyle: "full", timeStyle: "short" });
     await sendEmail({
       to: [interview.candidate_email],
       subject: `Chirayu Power — your ${interview.role} interview is scheduled`,
