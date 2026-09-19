@@ -643,13 +643,15 @@ export default function HiringApplication() {
                       }}
                       className={`role-tile ${selected === role.id ? "selected" : ""} ${role.is_open ? "is-open" : "is-closed"}`}
                     >
+                      <span className="role-tile-card">
+                        <span className="role-tile-icon"><Icon size={26} /></span>
+                        <strong>{role.role}</strong>
+                        <span className="role-tile-count">
+                          {role.locations.length === 1 ? role.locations[0] : `${role.locations.length} locations`}
+                        </span>
+                      </span>
                       <span className={role.is_open ? "role-tile-ribbon role-tile-ribbon-open" : "role-tile-ribbon role-tile-ribbon-closed"}>
                         {role.is_open ? "Open" : "Closed"}
-                      </span>
-                      <span className="role-tile-icon"><Icon size={26} /></span>
-                      <strong>{role.role}</strong>
-                      <span className="role-tile-count">
-                        {role.locations.length === 1 ? role.locations[0] : `${role.locations.length} locations`}
                       </span>
                     </button>
                   );

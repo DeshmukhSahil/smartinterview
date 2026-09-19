@@ -299,26 +299,29 @@
   gap: 16px;
 }
 
+/* .role-tile (the button) is just a positioning/clipping shell now -- all
+   the actual card look (border, background, the cut corner) lives on the
+   inner .role-tile-card so that .role-tile-ribbon can be its sibling
+   instead of its descendant. That split matters because the ribbon needs
+   to stay a plain rotated rectangle clipped only by .role-tile's own
+   rounded-rect overflow (as before), while .role-tile-card gets its own
+   separate clip-path notching out its top-right corner -- if the ribbon
+   were still a child of the notched element it would get notched away
+   too, in exactly the spot it's supposed to fill. */
 .role-tile {
   position: relative;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 6px;
-  padding: 26px 16px 22px;
-  border: 0.1px solid #c56a4c;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
   border-radius: 16px;
-  background: #ffffff;
+  background: none;
   color: #18314a;
-  box-shadow: 0 1px 2px rgba(15, 41, 66, 0.04), 0 1px 3px rgba(15, 41, 66, 0.03);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, background 0.2s ease;
+  transition: transform 0.2s ease;
 }
 
 .role-tile:hover:not(:disabled) {
-  border-color: #cbdcf3;
-  box-shadow: 0 16px 32px rgba(7, 84, 155, 0.16);
   transform: translateY(-4px);
 }
 
@@ -326,20 +329,48 @@
   color: #07549b;
 }
 
-.role-tile.selected {
-  border-color: #07549b;
-  background: #f5f9ff;
-  box-shadow: 0 0 0 3px rgba(7, 84, 155, 0.14);
-}
-
 .role-tile:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
+/* The visible card surface. Notched at the top-right corner (same 45deg
+   angle as the ribbon) so the ribbon reads as sitting *in* a cut corner
+   instead of *on top of* an intact bordered rectangle -- filter:drop-shadow
+   (not box-shadow) because it follows the clipped silhouette, including the
+   new diagonal edge, giving that edge a visible line instead of just an
+   abrupt, flat color change. */
+.role-tile-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 26px 16px 22px;
+  border: 0.1px solid #c56a4c;
+  border-radius: 16px;
+  background: #ffffff;
+  clip-path: polygon(0 0, calc(100% - 60px) 0, 100% 60px, 100% 100%, 0 100%);
+  filter: drop-shadow(0 1px 2px rgba(15, 41, 66, 0.04)) drop-shadow(0 1px 3px rgba(15, 41, 66, 0.03));
+  transition: border-color 0.2s ease, filter 0.2s ease, background 0.2s ease;
+}
+
+.role-tile:hover:not(:disabled) .role-tile-card {
+  border-color: #cbdcf3;
+  filter: drop-shadow(0 16px 32px rgba(7, 84, 155, 0.16));
+}
+
+.role-tile.selected .role-tile-card {
+  border-color: #07549b;
+  background: #f5f9ff;
+  filter: drop-shadow(0 0 3px rgba(7, 84, 155, 0.35));
+}
+
 /* Closed roles stay fully visible (see is_open) but recede a touch so the
    sorted open-first order also reads visually, not just by position. */
-.role-tile.is-closed {
+.role-tile.is-closed .role-tile-card {
   background: #fbfbfc;
 }
 
@@ -382,29 +413,11 @@
   color: #60768b;
 }
 
-/* Erases the card's own border along the top-right corner (including its
-   rounded arc) before the ribbon below is painted on top, so the ribbon
-   reads as a clean diagonal cut through that corner instead of a label
-   sitting on top of an intact bordered rectangle. Uses background:inherit
-   so it silently matches whichever background .role-tile has (default,
-   .is-closed, .selected) without needing a copy of each variant. Painted
-   after .role-tile's own border (as a generated first child) and before the
-   ribbon span (its next sibling), it sits exactly between the two. */
-.role-tile::before {
-  content: "";
-  position: absolute;
-  top: -1px;
-  right: -1px;
-  width: 70px;
-  height: 70px;
-  background: inherit;
-  clip-path: polygon(0 0, 100% 0, 100% 100%);
-  pointer-events: none;
-}
-
 /* Diagonal corner ribbon standing in for the old inline Open/Closed pill.
-   .role-tile needs overflow:hidden (set above) so the ribbon's excess width
-   clips flush against the card's rounded edge instead of floating past it. */
+   Sibling of .role-tile-card, not its child (see the comment on .role-tile
+   above), so .role-tile's own rounded-rect overflow:hidden -- not
+   .role-tile-card's notch clip-path -- is what clips its excess width flush
+   against the card's rounded edge. */
 .role-tile-ribbon {
   position: absolute;
   top: 13px;
@@ -454,7 +467,7 @@
     grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
     gap: 10px;
   }
-  .role-tile {
+  .role-tile-card {
     padding: 18px 10px 16px;
   }
   .city-bar-panel {
