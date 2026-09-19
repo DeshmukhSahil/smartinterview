@@ -623,30 +623,6 @@
   height: auto;
 }
 
-.job-alerts-bubble {
-  position: absolute;
-  z-index: 2;
-  top: 8px;
-  right: -6px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  padding: 10px 14px;
-  font-size: 11px;
-  color: #60768b;
-  text-align: center;
-  box-shadow: 0 8px 20px rgba(15, 41, 66, 0.1);
-}
-
-.job-alerts-bubble strong {
-  font-size: 14px;
-  color: #07549b;
-}
-
 @media (max-width: 800px) {
   .job-alerts-panel {
     flex-direction: column-reverse;
@@ -663,8 +639,5 @@
        align-self would instead shift it sideways. Reset both. */
     align-self: center;
     margin-bottom: 0;
-  }
-  .job-alerts-bubble {
-    right: 8px;
   }
 }

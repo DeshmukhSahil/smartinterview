@@ -735,11 +735,6 @@ export default function HiringApplication() {
                   alt=""
                   aria-hidden="true"
                 />
-                {totalActiveJobs > 0 && (
-                  <span className="job-alerts-bubble">
-                    <strong>{totalActiveJobs}+</strong> open roles right now
-                  </span>
-                )}
               </div>
             </section>
           )}
