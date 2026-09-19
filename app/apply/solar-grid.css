@@ -6,7 +6,7 @@
   --solar: #f5cf46;
   background: var(--paper);
   color: var(--ink);
-  padding: 100px max(24px, calc((100vw - 1320px) / 2)) 0;
+  padding: 72px max(24px, calc((100vw - 1320px) / 2)) 0;
   font-family: var(--font-solar-display), sans-serif;
 }
 .solar-hero { display: grid; grid-template-columns: 1.04fr 1fr; padding-top: 44px; gap: 0 48px; }
