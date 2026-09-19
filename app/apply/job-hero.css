@@ -201,6 +201,14 @@
 }
 
 @media (max-width: 900px) {
+  /* .job-hero's 150px horizontal padding is sized for desktop's two-column
+     grid; left unadjusted here it eats almost all the width on a phone,
+     squeezing the heading/search bar into a sliver (real bug, not just a
+     screenshot artifact -- confirmed via horizontal scroll on the live
+     site). */
+  .job-hero {
+    padding: 40px 32px 48px;
+  }
   .job-hero-grid {
     flex-direction: column-reverse;
     text-align: center;
@@ -229,6 +237,10 @@
 }
 
 @media (max-width: 700px) {
+  .job-hero {
+    padding: 28px 16px 32px;
+    border-radius: 16px;
+  }
   .job-hero-search {
     flex-wrap: wrap;
     border-radius: 20px;
@@ -287,7 +299,7 @@
   text-align: center;
   gap: 6px;
   padding: 26px 16px 22px;
-  border: 1px solid #edf0f5;
+  border: 0.1px solid #c56a4c;
   border-radius: 16px;
   background: #ffffff;
   color: #18314a;
@@ -338,7 +350,7 @@
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: linear-gradient(145deg, #1c2f6e, #2b3a8f);
+  background: linear-gradient(145deg, #1c2f6e70, #8d8f2b85);
   color: #ffffff;
   margin-bottom: 6px;
   box-shadow: 0 6px 14px rgba(43, 58, 143, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.18);
@@ -395,6 +407,30 @@
   margin: 0 0 26px;
   background-color: white;
   padding: 0 28px;
+}
+
+/* Denser mobile layout for the Top Job Roles / Browse-by-city panels:
+   less outer padding, a tighter grid gap, and a smaller minmax so two
+   columns of role cards still fit on a typical phone width instead of
+   collapsing to one with lots of wasted side padding. Placed after every
+   base rule it touches -- at equal specificity the later rule in source
+   order wins regardless of media-query nesting, so an override placed
+   before its base rule would silently lose (hit this exact bug pattern
+   with .hiring-page/.hiring-steps in solar-grid.css earlier). */
+@media (max-width: 700px) {
+  .role-tiles-panel {
+    padding: 18px;
+  }
+  .role-tiles-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 10px;
+  }
+  .role-tile {
+    padding: 18px 10px 16px;
+  }
+  .city-bar-panel {
+    padding: 0 18px;
+  }
 }
 
 .city-bar-slider {
