@@ -17,7 +17,7 @@
      hex decorations sit in the top-left and bottom-right corners and need
      the same light, cool backdrop at both ends to read clearly -- a pale
      blue end (as this used to have) let the blue hexagons wash out into it. */
-  background: linear-gradient(120deg, #e2fff1 0%, #fff8df 50%, #e2fff1 100%);
+  background: linear-gradient(135deg, #EEF6FF 0%, #FFF9E8 100%);
   color: #18314a;
 }
 
@@ -32,7 +32,7 @@
   width: 200px;
   height: auto;
   max-height: 60%;
-  opacity: 0.4;
+  opacity: 0.1;
   pointer-events: none;
   user-select: none;
 }
@@ -249,7 +249,7 @@
 /* Top Job Roles panel */
 .role-tiles-panel {
   margin: 0 0 26px;
-  background: rgba(255, 255, 255, 0);
+  background: rgba(255, 255, 255, 0.733);
   border-radius: 16px;
   padding: 28px;
 }
@@ -381,6 +381,7 @@
 /* City filter bar */
 .city-bar-panel {
   margin: 0 0 26px;
+  padding: 0 28px;
 }
 
 .city-bar-slider {
