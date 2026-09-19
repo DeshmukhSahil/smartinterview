@@ -129,133 +129,12 @@
   bottom: 18px !important;
 }
 
-.navDropdown {
-  position: relative;
-  height: 100px;
-  display: flex;
-  align-items: center;
-  transition: height 0.35s cubic-bezier(0.25, 1, 0.5, 1);
-}
-
-.scrolled .navDropdown {
-  height: 72px !important;
-}
-
-.dropdownChevron {
-  opacity: 0.7;
-  margin-top: 1px;
-  transition: transform 0.2s ease, color 0.25s ease;
-  color: #1a2e4a;
-}
-
-.navDropdown:hover .dropdownChevron {
-  transform: rotate(180deg);
-  color: #e07e10 !important;
-}
-
-.dropdownPanel {
-  position: absolute;
-  top: 80px;
-  left: 0;
-  min-width: 250px;
-  width: max-content;
-  max-width: 320px;
-  padding: 8px 0;
-  border: 1px solid #dce5ef;
-  border-radius: 12px;
-  background: #ffffff;
-  box-shadow: 0 16px 36px rgba(15, 35, 60, 0.12);
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transform: translateY(8px);
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease,
-    visibility 0.2s ease,
-    top 0.35s ease;
-  z-index: 1000;
-}
-
-.scrolled .dropdownPanel {
-  top: 64px !important;
-}
-
-.navDropdown:hover .dropdownPanel {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  transform: translateY(0);
-}
-
-.dropdownItem {
-  display: block;
-  padding: 9px 18px;
-  color: #243e5a;
-  font-size: 13.5px;
-  font-weight: 600;
-  text-decoration: none;
-  text-align: left;
-  white-space: nowrap;
-  transition: background 0.15s ease, color 0.15s ease, padding-left 0.15s ease;
-}
-
-.dropdownItem:hover {
-  background: #eef6ff;
-  color: #07549b !important;
-  padding-left: 22px;
-}
-
 .actionArea {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   justify-content: flex-end;
   flex-shrink: 0;
-}
-
-.themeToggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(15, 23, 42, 0.25);
-  background: transparent;
-  color: #1a2e4a;
-  cursor: pointer;
-  transition: all 0.25s ease;
-}
-
-.themeToggle:hover {
-  background: rgba(15, 23, 42, 0.06);
-  border-color: #07549b;
-  color: #07549b;
-}
-
-.contactPill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  height: 38px;
-  padding: 0 1.25rem;
-  border: 1.5px solid rgba(15, 23, 42, 0.25);
-  border-radius: 999px;
-  background: transparent;
-  color: #1a2e4a;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-decoration: none;
-  transition: all 0.25s ease;
-  white-space: nowrap;
-}
-
-.contactPill:hover {
-  border-color: #07549b;
-  background: #07549b;
-  color: #ffffff;
 }
 
 .mobileToggle {
@@ -288,20 +167,6 @@
   color: #1a2e4a;
   text-decoration: none;
   display: block;
-}
-
-.mobileSubLinks {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-left: 12px;
-  margin-top: 6px;
-}
-
-.mobileSubLinks a {
-  font-size: 13px;
-  color: #556c82;
-  text-decoration: none;
 }
 
 @keyframes fadeIn {
