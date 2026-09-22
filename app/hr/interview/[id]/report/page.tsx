@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2, Sparkles, Send, CheckCircle2 } from "lucide-react";
 import { useHrSession } from "@/hooks/use-hr-session";
 import { hrFetch } from "@/lib/hrApi";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { ROUND_LABELS, roundSchema, type Round } from "@/lib/hiring/schema";
 
 const RECOMMENDATIONS = [
   { value: "strong_yes", label: "Strong yes" },
@@ -31,10 +32,16 @@ const fromLines = (text: string) => text.split("\n").map(s => s.trim()).filter(B
 export default function HrInterviewReportPage() {
   const params = useParams();
   const id = params.id as string;
+  const searchParams = useSearchParams();
+  const round: Round = roundSchema.safeParse(searchParams.get("round")).data ?? "screening";
   const router = useRouter();
   const { session, loading, accessToken } = useHrSession();
 
   const [interview, setInterview] = useState<any | null>(null);
+  // The round's own row from round_notes — carries ai_draft, hr_notes, submitted_at for
+  // THIS round specifically (json.interview only ever pre-fills the screening round, for
+  // backward compatibility with the original one-on-one flow).
+  const [roundRow, setRoundRow] = useState<any | null>(null);
   const [fetching, setFetching] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<NotesForm>({ summary: "", keyPoints: "", strengths: "", concerns: "", followUps: "", recommendation: "needs_review" });
@@ -49,7 +56,9 @@ export default function HrInterviewReportPage() {
       try {
         const json = await hrFetch(accessToken, `/api/hiring/interview/${id}`);
         setInterview(json.interview);
-        const base = json.interview.hr_notes || json.interview.ai_notes;
+        const row = (json.round_notes || []).find((rn: any) => rn.round === round) || null;
+        setRoundRow(row);
+        const base = row?.hr_notes || row?.ai_draft;
         if (base) {
           setForm({
             summary: base.summary || "",
@@ -66,7 +75,7 @@ export default function HrInterviewReportPage() {
         setFetching(false);
       }
     })();
-  }, [accessToken, id]);
+  }, [accessToken, id, round]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,11 +92,11 @@ export default function HrInterviewReportPage() {
       };
       const json = await hrFetch(accessToken, `/api/hiring/interview/${id}/notes/submit`, {
         method: "POST",
-        body: JSON.stringify({ hr_notes }),
+        body: JSON.stringify({ hr_notes, round }),
       });
       if (json.success) {
         toast.success("Report submitted and emailed to HR and the candidate.");
-        setInterview((prev: any) => ({ ...prev, hr_notes, interview_status: "completed" }));
+        setRoundRow((prev: any) => ({ ...(prev || {}), hr_notes, submitted_at: new Date().toISOString() }));
       }
     } catch (e: any) {
       toast.error(e.message || "Failed to submit report");
@@ -105,26 +114,26 @@ export default function HrInterviewReportPage() {
   }
   if (!session || !interview) return null;
 
-  const alreadySubmitted = interview.interview_status === "completed";
+  const alreadySubmitted = !!roundRow?.submitted_at;
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-10 space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-dark-100">Interview report</h1>
+        <h1 className="text-xl font-bold text-dark-100">Interview report — {ROUND_LABELS[round]}</h1>
         <p className="text-xs text-soft-gray">{interview.role} · {interview.candidate_name}</p>
       </div>
 
       {alreadySubmitted && (
         <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-success-green text-xs font-semibold px-4 py-3 rounded-xl">
           <CheckCircle2 size={15} />
-          Submitted {interview.notes_submitted_at ? new Date(interview.notes_submitted_at).toLocaleString() : ""} — editing and resubmitting sends an updated report email.
+          Submitted {roundRow?.submitted_at ? new Date(roundRow.submitted_at).toLocaleString() : ""} — editing and resubmitting sends an updated report email.
         </div>
       )}
 
-      {interview.ai_notes && (
+      {roundRow?.ai_draft && (
         <div className="bg-blue-50/60 border border-primary-blue/20 rounded-2xl p-5 space-y-2">
           <h2 className="text-sm font-bold text-primary-blue flex items-center gap-1.5"><Sparkles size={14} /> AI-drafted notes (captured live)</h2>
-          <p className="text-xs text-dark-100">{interview.ai_notes.summary}</p>
+          <p className="text-xs text-dark-100">{roundRow.ai_draft.summary}</p>
         </div>
       )}
 

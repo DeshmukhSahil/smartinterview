@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { createHash, randomBytes } from "node:crypto";
-import { campaignSchema, resultSchema, notesSchema, type Campaign, type InterviewNotes, type TranscriptTurn } from "./schema";
+import { campaignSchema, resultSchema, notesSchema, type Campaign, type InterviewNotes, type TranscriptTurn, type Round } from "./schema";
 import { interviewLoginUrl } from "./link";
 
 export function env(name: string) {
@@ -172,6 +172,42 @@ export async function draftNotes(transcript: TranscriptTurn[], context: { role: 
     }
   }
   throw new Error("Unable to draft interview notes right now");
+}
+
+// ---- Round notes (Interview Notes Engine, Phase 1) ---------------------------------
+// One row per (interview, round) in public.round_notes -- see
+// migrations/20260922_round_notes.sql. Generalizes what used to be single-row columns
+// on public.interviews (live_transcript / ai_notes / hr_notes), which are kept as-is,
+// untouched, for any screening row already in flight -- see that migration's backfill.
+
+export async function getRoundNotes(interviewId: string, round: Round) {
+  const { data, error } = await interviewDb()
+    .from("round_notes").select("*").eq("interview_id", interviewId).eq("round", round).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function listRoundNotes(interviewId: string) {
+  const { data, error } = await interviewDb()
+    .from("round_notes").select("*").eq("interview_id", interviewId);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function saveRoundDraft(interviewId: string, round: Round, transcript: TranscriptTurn[], notes: InterviewNotes) {
+  const { error } = await interviewDb().from("round_notes").upsert(
+    { interview_id: interviewId, round, live_transcript: transcript, ai_draft: notes },
+    { onConflict: "interview_id,round" },
+  );
+  if (error) throw error;
+}
+
+export async function submitRoundNotes(interviewId: string, round: Round, hrNotes: InterviewNotes, submittedBy: string) {
+  const { error } = await interviewDb().from("round_notes").upsert(
+    { interview_id: interviewId, round, hr_notes: hrNotes, submitted_at: new Date().toISOString(), submitted_by: submittedBy },
+    { onConflict: "interview_id,round" },
+  );
+  if (error) throw error;
 }
 
 export async function deliver(id: string) {

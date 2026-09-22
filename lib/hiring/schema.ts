@@ -78,6 +78,33 @@ export const notesSchema = z.object({
 });
 export type InterviewNotes = z.infer<typeof notesSchema>;
 export type TranscriptTurn = z.infer<typeof transcriptTurnSchema>;
+
+// A human interview round. "screening" is the original one-on-one call; the other three
+// are candidate_pipeline stages (Interview / Final Interview with MD / HR Round) that
+// previously had no notes capture at all -- see migrations/20260922_round_notes.sql.
+// Short DB tokens, distinct from the ERP's candidate_pipeline.stage display names;
+// ROUND_LABELS is the display mapping.
+export const roundSchema = z.enum(["screening", "interview", "final_md", "hr_round"]);
+export type Round = z.infer<typeof roundSchema>;
+export const ROUND_LABELS: Record<Round, string> = {
+  screening: "Screening",
+  interview: "Interview",
+  final_md: "Final Interview with MD",
+  hr_round: "HR Round",
+};
+export const roundNotesRowSchema = z.object({
+  id: z.string().uuid(),
+  interview_id: z.string().uuid(),
+  round: roundSchema,
+  transcript_source: z.enum(["mic", "graph_transcript", "manual_upload"]),
+  live_transcript: z.array(transcriptTurnSchema),
+  ai_draft: notesSchema.nullable(),
+  ai_verified: notesSchema.nullable(),
+  hr_notes: notesSchema.nullable(),
+  submitted_at: z.string().nullable(),
+  submitted_by: z.string().nullable(),
+});
+export type RoundNotesRow = z.infer<typeof roundNotesRowSchema>;
 export function validateAnswers(c: Campaign, a: z.infer<typeof applicantSchema>) {
   if (!c.locations.includes(a.location)) throw new Error("Choose an available location for this role");
   if (Object.keys(a.answers).some(id => !c.fields.some(f => f.id === id))) throw new Error("Form changed. Reload and try again");

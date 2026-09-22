@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Loader2, ExternalLink, Mic, MicOff, ArrowRight, Sparkles } from "lucide-react";
@@ -9,17 +9,24 @@ import { useHrSession } from "@/hooks/use-hr-session";
 import { hrFetch } from "@/lib/hrApi";
 import { useSpeechTranscript } from "@/hooks/use-speech-transcript";
 import { cn } from "@/lib/utils";
+import { ROUND_LABELS, roundSchema, type Round } from "@/lib/hiring/schema";
 
 // The AI "listens throughout" this way: this page runs continuous browser speech-to-text
 // (the same mechanism the AI-assisted interview uses) on the HR side while the actual
 // interview happens in Teams, periodically flushing the captured transcript to the
 // server, which re-drafts AI notes shown live below. See the plan's note on why this is
 // mic-pickup-dependent rather than a true Teams-side transcript.
+//
+// Generalized (Interview Notes Engine, Phase 1) to work for every human round, not just
+// the original one-on-one screening call — `round` in the URL picks which one; each
+// round gets its own transcript/notes row in round_notes (migrations/20260922_round_notes.sql).
 const FLUSH_INTERVAL_MS = 25000;
 
 export default function HrConductInterviewPage() {
   const params = useParams();
   const id = params.id as string;
+  const searchParams = useSearchParams();
+  const round: Round = roundSchema.safeParse(searchParams.get("round")).data ?? "screening";
   const router = useRouter();
   const { session, loading, accessToken } = useHrSession();
 
@@ -46,15 +53,19 @@ export default function HrConductInterviewPage() {
       try {
         const json = await hrFetch(accessToken, `/api/hiring/interview/${id}`);
         setInterview(json.interview);
-        setTranscriptLog(json.interview.live_transcript || []);
-        setNotes(json.interview.ai_notes || null);
+        // json.interview is only pre-filled with the SCREENING round's data (backward
+        // compatibility for the original flow) — every round, screening included, reads
+        // its own row out of round_notes here instead.
+        const roundRow = (json.round_notes || []).find((rn: any) => rn.round === round);
+        setTranscriptLog(roundRow?.live_transcript || []);
+        setNotes(roundRow?.ai_draft || null);
       } catch (e: any) {
         toast.error(e.message || "Failed to load interview");
       } finally {
         setFetching(false);
       }
     })();
-  }, [accessToken, id]);
+  }, [accessToken, id, round]);
 
   const flush = async (finalChunk?: string) => {
     if (!accessToken) return;
@@ -69,7 +80,7 @@ export default function HrConductInterviewPage() {
     try {
       const json = await hrFetch(accessToken, `/api/hiring/interview/${id}/notes/draft`, {
         method: "POST",
-        body: JSON.stringify({ transcript: nextLog }),
+        body: JSON.stringify({ transcript: nextLog, round }),
       });
       setNotes(json.notes);
     } catch (e: any) {
@@ -106,7 +117,7 @@ export default function HrConductInterviewPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-10 space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-dark-100">Conduct interview</h1>
+        <h1 className="text-xl font-bold text-dark-100">Conduct interview — {ROUND_LABELS[round]}</h1>
         <p className="text-xs text-soft-gray">{interview.role} · {interview.candidate_name}</p>
       </div>
 
@@ -178,7 +189,7 @@ export default function HrConductInterviewPage() {
       </div>
 
       <Link
-        href={`/hr/interview/${id}/report`}
+        href={`/hr/interview/${id}/report?round=${round}`}
         className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary-blue"
       >
         Go to report <ArrowRight size={14} />
