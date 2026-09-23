@@ -53,6 +53,12 @@ export const applicantSchema = z.object({
   email: z.string().trim().email().max(254).transform(s => s.toLowerCase()),
   phone: z.string().trim().regex(/^[+\d ()-]{7,25}$/),
   location: z.string().trim().min(1).max(100), years: z.number().min(0).max(60),
+  // When true, `location` is set to the fixed string "Open to relocate" rather than one
+  // of the role's approved locations -- validateAnswers() skips its usual
+  // c.locations.includes(a.location) check for this case. Stored so HR can filter/see
+  // it, and so the value stays human-readable everywhere `location` is already displayed
+  // without any of those call sites needing to special-case it.
+  open_to_relocate: z.boolean().default(false),
   answers: z.record(z.string().max(50), z.string().max(2000)), consent: z.literal(true),
 });
 export const resultSchema = z.object({
@@ -106,7 +112,7 @@ export const roundNotesRowSchema = z.object({
 });
 export type RoundNotesRow = z.infer<typeof roundNotesRowSchema>;
 export function validateAnswers(c: Campaign, a: z.infer<typeof applicantSchema>) {
-  if (!c.locations.includes(a.location)) throw new Error("Choose an available location for this role");
+  if (!a.open_to_relocate && !c.locations.includes(a.location)) throw new Error("Choose an available location for this role");
   if (Object.keys(a.answers).some(id => !c.fields.some(f => f.id === id))) throw new Error("Form changed. Reload and try again");
   for (const f of c.fields) {
     const v = a.answers[f.id]?.trim() || "";

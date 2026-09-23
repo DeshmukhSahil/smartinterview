@@ -120,6 +120,51 @@
   color: #60768b;
 }
 
+/* Anchors the autocomplete dropdown -- only the role-search field needs
+   this; the city field's own SearchableSelect positions its dropdown
+   relative to itself already. */
+.job-hero-role {
+  position: relative;
+}
+
+.job-hero-suggestions {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: -6px;
+  right: -6px;
+  max-height: 280px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: #ffffff;
+  border: 1px solid #e3e9f2;
+  border-radius: 14px;
+  box-shadow: 0 20px 40px rgba(15, 41, 66, 0.14);
+  z-index: 20;
+  text-align: left;
+}
+
+.job-hero-suggestions li button {
+  display: block;
+  width: 100%;
+  padding: 9px 12px;
+  border: 0;
+  background: none;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #18314a;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.1s, color 0.1s;
+}
+
+.job-hero-suggestions li button:hover {
+  background-color: #eef6ff;
+  color: #07549b;
+}
+
 .job-hero-field input,
 .job-hero-field select {
   flex: 1;
@@ -280,6 +325,90 @@
   }
 }
 
+/* Zero-result search state -- the only place the general-application CTA
+   ever appears (see openGeneralApplication in page.tsx), so it's never
+   reachable for a role that already has a real, specific listing. */
+.no-results-panel {
+  padding: 32px 20px;
+  text-align: center;
+}
+
+.no-results-panel p {
+  margin: 0 0 8px;
+  color: #46566b;
+  font-size: 14px;
+}
+
+.no-results-apply-btn {
+  margin-top: 10px;
+  padding: 12px 22px;
+  border: 0;
+  border-radius: 999px;
+  background: #f4b400;
+  color: #18314a;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.no-results-apply-btn:hover {
+  background: #e0a600;
+}
+
+/* Safety net on the general-application form's "desired role" field --
+   see matchOpenCampaigns in page.tsx. Styled like field-hint/field-error
+   but actionable, so it reads as "here's a better option" rather than a
+   validation complaint. */
+.desired-role-nudge {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: #fff8e8;
+  border: 1px solid #f4dfa8;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.desired-role-nudge p {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #6b5411;
+}
+
+.desired-role-nudge button {
+  align-self: flex-start;
+  border: 0;
+  background: none;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #07549b;
+  cursor: pointer;
+  text-align: left;
+}
+
+.desired-role-nudge button:hover {
+  text-decoration: underline;
+}
+
+/* Shown when the city filter is set to a place from the India Post search
+   that has no matching campaign -- the filter itself becomes a no-op in
+   this case (see cityFilterHasRoles in page.tsx) so every role stays
+   visible below; this banner is what tells the candidate why. */
+.city-no-roles-banner {
+  margin: 0 0 16px;
+  padding: 14px 18px;
+  background: #fff8e8;
+  border: 1px solid #f4dfa8;
+  border-radius: 12px;
+  color: #6b5411;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
 /* Top Job Roles panel */
 .role-tiles-panel {
   margin: 0 0 26px;
@@ -306,10 +435,203 @@
   border-bottom: 3px solid #f4b400;
 }
 
+/* Shown when a single department is selected from the picker, to return
+   to it -- see selectedDepartment in page.tsx. */
+.dept-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 20px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 13px;
+  font-weight: 700;
+  color: #07549b;
+  cursor: pointer;
+}
+
+.dept-back-btn:hover {
+  text-decoration: underline;
+}
+
 .role-tiles-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+  grid-auto-rows: min-content;
+  /* "dense" lets the smaller 1x1 role-tile cards backfill any grid cells
+     the preview panel's span doesn't use, in source order, instead of
+     leaving that space blank until the next row -- this is what makes the
+     card grid flow around the panel and fill the row it sits in. */
+  grid-auto-flow: dense;
   gap: 16px;
+}
+
+/* The description panel for whichever card is hovered/focused, placed as
+   a grid item (not a flex sibling) so it participates in the same
+   auto-fill/dense layout as the role-tile cards -- it claims a 2x2 block
+   of cells and the cards flow around it, filling the rest of that row and
+   any it doesn't fully use, at any column count and any role count. */
+.dept-role-preview {
+  grid-column: span 2;
+  grid-row: span 2;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #f8faff;
+  border: 1px solid #e3e9f2;
+  border-radius: 14px;
+  padding: 20px 22px;
+}
+
+.dept-role-preview h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #18314a;
+}
+
+.dept-role-preview-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 12.5px;
+  color: #60768b;
+}
+
+.dept-role-preview-meta span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.dept-role-preview p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: #3c4a5e;
+}
+
+.dept-role-preview-doc {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Fallback for a role with no document match (the "Other" bucket, e.g.
+   CEO/Content Creator) -- these use the campaign's own free-form
+   description, which runs far longer than the document's compact
+   Task/Duration text and would otherwise blow out the panel/row height
+   compared to every matched department. Clamped to roughly the same
+   visual weight; the full text is still one click away via "View full
+   details". */
+.dept-role-preview-desc {
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.dept-role-preview ul {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #3c4a5e;
+}
+
+.dept-role-preview-link {
+  align-self: flex-start;
+  margin-top: 4px;
+  border: 0;
+  background: none;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #07549b;
+  cursor: pointer;
+}
+
+.dept-role-preview-link:hover {
+  text-decoration: underline;
+}
+
+/* Department as the first layer, roles nested beneath within the same
+   "Top Job Roles" panel -- one heading + grid per department, in company
+   department order (see lib/hiring/departments.ts). */
+.dept-group + .dept-group {
+  margin-top: 30px;
+}
+
+.dept-group-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #18314a;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e3e9f2;
+}
+
+.dept-group-count {
+  font-size: 12px;
+  font-weight: 700;
+  color: #07549b;
+  background: #eaf2fc;
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+
+/* Read-only reference list of every role title in a department from the
+   company's designation document -- distinct from .role-tiles-grid above
+   it, which is only ever live, clickable campaigns. Sits below the open
+   tiles (if any) so "what's open" and "the full org structure" stay
+   visually separate instead of implying every listed title is hiring. */
+.dept-directory-label {
+  margin: 14px 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #60768b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Reads as a horizontal career ladder (the document already lists each
+   department's roles senior-first) -- plain text (no chip/box styling) so
+   it reads as a breadcrumb trail rather than a cloud of buttons. The "›"
+   separator is a ::before on the item itself, not a separate element, so
+   it's physically part of that item's box and always wraps together with
+   it -- never left dangling alone at the start of a line. */
+.dept-directory-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dept-directory-item {
+  font-size: 13px;
+  font-weight: 600;
+  color: #18314a;
+  display: inline-flex;
+  align-items: center;
+}
+
+.dept-directory-item:not(:first-child)::before {
+  content: "\203A";
+  margin: 0 8px;
+  font-size: 16px;
+  font-weight: 400;
+  color: #9fb0c4;
 }
 
 /* .role-tile (the button) is just a positioning/clipping shell now -- all
@@ -381,6 +703,18 @@
 .role-tile:hover:not(:disabled) .role-tile-card {
   border-color: #cbdcf3;
   filter: drop-shadow(0 16px 32px rgba(7, 84, 155, 0.16));
+}
+
+/* Department picker tiles reuse the exact role-tile card look but have no
+   ribbon (departments aren't "open"/"closed") -- the notch and its dashed
+   edge only make sense as a slot for that ribbon, so both are undone back
+   to a plain rounded rectangle here. */
+.role-tile-plain .role-tile-card {
+  /* The base rule's dashed border-right is itself !important (it has to
+     win over the plain border-right shorthand set right above it), so
+     this override needs !important too or it would silently lose. */
+  border-right: 0.1px solid #c56a4c !important;
+  clip-path: none;
 }
 
 .role-tile.selected .role-tile-card {

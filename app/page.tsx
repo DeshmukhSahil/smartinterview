@@ -26,8 +26,19 @@ import {
   ChevronLeft,
   ChevronRight,
   Bell,
+  Megaphone,
+  PencilRuler,
+  Settings,
+  Handshake,
+  FileText,
+  ShoppingCart,
+  Users,
+  ShieldCheck,
+  Sun,
 } from "lucide-react";
 import type { Campaign } from "@/lib/hiring/schema";
+import { departmentForRole, DEPARTMENT_ORDER, DEPARTMENT_ROLES, matchCanonicalRole, type Department } from "@/lib/hiring/departments";
+import { groupLocationsByState, stateForLocation, formatStateList } from "@/lib/hiring/locations";
 import Navbar from "@/components/Navbar";
 import "./hiring.css";
 import { solarFonts } from "./SolarIntro";
@@ -76,6 +87,27 @@ function roleIcon(role: string) {
   return ROLE_ICONS.find(([pattern]) => pattern.test(role))?.[1] || Briefcase;
 }
 
+// One distinct icon per real department, for the top-level department
+// picker -- roleIcon()'s keyword match is too generic for department names
+// themselves (most would just fall back to the plain briefcase).
+const DEPARTMENT_ICONS: Record<Department | "Other", typeof Briefcase> = {
+  Finance: Calculator,
+  Marketing: Megaphone,
+  Sales: TrendingUp,
+  Designing: PencilRuler,
+  "O&M": Settings,
+  Stores: Warehouse,
+  Liaisoning: Handshake,
+  Tendering: FileText,
+  Purchase: ShoppingCart,
+  Project: HardHat,
+  HR: Users,
+  Safety: ShieldCheck,
+  "Admin & Support": Building2,
+  "Solar I&C": Sun,
+  Other: Briefcase,
+};
+
 // Purely decorative variety for the city tiles -- deterministic per city name
 // (not random) so the same city always gets the same icon across renders.
 const CITY_ICONS = [Landmark, Building2, Factory, Warehouse, Building, Castle];
@@ -84,6 +116,16 @@ function cityIcon(city: string) {
   for (let i = 0; i < city.length; i++) hash = (hash * 31 + city.charCodeAt(i)) >>> 0;
   return CITY_ICONS[hash % CITY_ICONS.length];
 }
+
+// Static half of the role-search autocomplete's suggestion pool (the
+// document's role titles + department names never change at runtime);
+// live campaign titles are merged in per-render in the component, since
+// those change as campaigns are fetched.
+const CANONICAL_ROLE_TITLES: string[] = [
+  ...DEPARTMENT_ORDER,
+  ...Object.values(DEPARTMENT_ROLES).flatMap(roles => roles.map(r => r.title)),
+];
+const GENERAL_APPLICATION_JOB_CODE = "GENERAL";
 
 interface SearchableSelectProps {
   options: string[];
@@ -95,6 +137,11 @@ interface SearchableSelectProps {
   onBlur?: () => void;
   id?: string;
   ariaLabel?: string;
+  // When set, typing also queries this (debounced) and merges the results
+  // in below the local `options` -- used only for the city filter, so a
+  // candidate can find their own city/town/village even where it has no
+  // open role yet, instead of being limited to `options` alone.
+  asyncSearch?: (query: string) => Promise<string[]>;
 }
 
 function SearchableSelect({
@@ -107,18 +154,45 @@ function SearchableSelect({
   onBlur,
   id,
   ariaLabel,
+  asyncSearch,
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [highlightedIndex, setHighlightedIndex] = useState(0);
+  const [asyncOptions, setAsyncOptions] = useState<string[]>([]);
+  const [searching, setSearching] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    if (!asyncSearch) return;
+    const q = search.trim();
+    if (q.length < 2) {
+      setAsyncOptions([]);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    let cancelled = false;
+    const handle = setTimeout(() => {
+      asyncSearch(q)
+        .then(results => { if (!cancelled) setAsyncOptions(results); })
+        .catch(() => { if (!cancelled) setAsyncOptions([]); })
+        .finally(() => { if (!cancelled) setSearching(false); });
+    }, 300);
+    return () => { cancelled = true; clearTimeout(handle); };
+  }, [search, asyncSearch]);
+
   const filteredOptions = useMemo(() => {
-    if (!search.trim()) return options;
     const q = search.toLowerCase().trim();
-    return options.filter(opt => opt.toLowerCase().includes(q));
-  }, [options, search]);
+    const local = !q ? options : options.filter(opt => opt.toLowerCase().includes(q));
+    if (!asyncSearch || !asyncOptions.length) return local;
+    const merged = [...local];
+    for (const loc of asyncOptions) {
+      if (!merged.some(m => m.toLowerCase() === loc.toLowerCase())) merged.push(loc);
+    }
+    return merged;
+  }, [options, search, asyncOptions, asyncSearch]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -168,6 +242,8 @@ function SearchableSelect({
       e.preventDefault();
       if (filteredOptions[highlightedIndex]) {
         handleSelect(filteredOptions[highlightedIndex]);
+      } else if (!filteredOptions.length && !searching && asyncSearch && search.trim()) {
+        handleSelect(search.trim());
       }
     } else if (e.key === "Escape" || e.key === "Tab") {
       setOpen(false);
@@ -238,11 +314,36 @@ function SearchableSelect({
 
         <ul className="searchable-select-options">
           {filteredOptions.length === 0 ? (
-            <li className="searchable-select-no-results">No matches found for &ldquo;{search}&rdquo;</li>
+            searching ? (
+              <li className="searchable-select-no-results">Searching…</li>
+            ) : asyncSearch && search.trim() ? (
+              // No database (neither existing campaigns nor the India Post
+              // search) has this place -- rather than dead-ending someone
+              // from a village too small to have its own post office
+              // record, let them use exactly what they typed.
+              <li
+                role="option"
+                aria-selected={false}
+                className="searchable-select-option searchable-select-freetext"
+                onClick={e => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleSelect(search.trim());
+                }}
+              >
+                <span>
+                  Use &ldquo;{search.trim()}&rdquo; as my city
+                  <span className="searchable-select-option-hint">Not in our records yet -- no open roles yet</span>
+                </span>
+              </li>
+            ) : (
+              <li className="searchable-select-no-results">No matches found for &ldquo;{search}&rdquo;</li>
+            )
           ) : (
             filteredOptions.map((opt, idx) => {
               const isSelected = opt === value;
               const isHighlighted = idx === highlightedIndex;
+              const hasNoRolesYet = !!asyncSearch && !options.includes(opt);
               return (
                 <li
                   key={opt}
@@ -256,7 +357,10 @@ function SearchableSelect({
                   }}
                   onMouseEnter={() => setHighlightedIndex(idx)}
                 >
-                  <span>{opt}</span>
+                  <span>
+                    {opt}
+                    {hasNoRolesYet && <span className="searchable-select-option-hint">No open roles yet</span>}
+                  </span>
                   {isSelected && <span style={{ color: "#07549b", fontWeight: "bold" }}>✓</span>}
                 </li>
               );
@@ -270,14 +374,42 @@ function SearchableSelect({
 
 export default function HiringApplication() {
   const [campaigns, setCampaigns] = useState<PublicCampaign[]>([]);
+  // Applied filters -- what actually narrows the role grid below. Kept
+  // separate from the hero search bar's own draft state (roleQueryDraft /
+  // cityFilterDraft) so typing a role and picking a city doesn't filter
+  // anything until the candidate hits SEARCH, applying both together.
   const [roleQuery, setRoleQuery] = useState("");
   const [cityFilter, setCityFilter] = useState("");
+  const [roleQueryDraft, setRoleQueryDraft] = useState("");
+  const [cityFilterDraft, setCityFilterDraft] = useState("");
+  // Top-level department picker: null shows a grid of all 14 departments;
+  // picking one narrows the page down to just that department's roles.
+  // Running a text/city search (runSearch) drops back out of this view.
+  const [selectedDepartment, setSelectedDepartment] = useState<Department | "Other" | null>(null);
+  // Autocomplete dropdown under the role-search input -- open state is
+  // separate from whether there's anything to show so Escape/click-outside
+  // can close it without fighting a query that still has matches.
+  const [roleSuggestOpen, setRoleSuggestOpen] = useState(false);
+  const roleFieldRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState("");
+  // Which open-role card's description shows in the preview panel beside a
+  // department's tiles -- hovering/focusing a card updates it; defaults to
+  // the first open role in that department when nothing's been hovered yet.
+  const [previewRoleId, setPreviewRoleId] = useState("");
   const [viewStage, setViewStage] = useState<"detail" | "form">("detail");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [candidate, setCandidate] = useState({ name: "", email: "", phone: "", location: "", years: "", consent: false });
+  const [candidate, setCandidate] = useState({ name: "", email: "", phone: "", location: "", years: "", consent: false, open_to_relocate: false });
+  // State half of the State -> District location picker. UI-only (not submitted) --
+  // `candidate.location` (the district) is the field of record. Kept in sync below
+  // whenever location changes from elsewhere (switching roles, a single-location role
+  // auto-filling it), not just from this picker's own onChange.
+  const [selectedState, setSelectedState] = useState("");
+  useEffect(() => {
+    if (candidate.open_to_relocate) { setSelectedState(""); return; }
+    setSelectedState(candidate.location ? stateForLocation(candidate.location) : "");
+  }, [candidate.location, candidate.open_to_relocate]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [hasResume, setHasResume] = useState(false);
@@ -289,10 +421,99 @@ export default function HiringApplication() {
   const [canScrollCitiesRight, setCanScrollCitiesRight] = useState(false);
 
   const c = campaigns.find(c => c.id === selected);
+  // State -> District grouping of the CURRENT role's approved locations, for the
+  // "Preferred location" picker below. Never offers a state/district the role doesn't
+  // actually have.
+  const locationsByState = useMemo(() => groupLocationsByState(c?.locations || []), [c]);
+  const districtsInState = locationsByState[selectedState] || [];
   const allCities = useMemo(
     () => [...new Set(campaigns.flatMap(role => role.locations))].sort(),
     [campaigns]
   );
+  // The one seeded catch-all campaign for roles the company doesn't have a
+  // specific listing for -- found by job_code rather than by role text so
+  // renaming its display title later doesn't break the lookup. Undefined
+  // until it's actually seeded, in which case every CTA that depends on it
+  // just doesn't render (see the "no results" empty state below).
+  const generalApplicationCampaign = campaigns.find(camp => camp.job_code === GENERAL_APPLICATION_JOB_CODE);
+  // Full autocomplete pool for the role-search box: every department name
+  // and document role title (static) plus every live campaign's own title
+  // (changes as campaigns load), deduped case-insensitively.
+  const roleSuggestionPool = useMemo(() => {
+    const seen = new Set<string>();
+    const pool: string[] = [];
+    for (const title of [...CANONICAL_ROLE_TITLES, ...campaigns.map(role => role.role)]) {
+      const key = title.toLowerCase();
+      if (!seen.has(key)) { seen.add(key); pool.push(title); }
+    }
+    return pool;
+  }, [campaigns]);
+  function matchRoleSuggestions(query: string, limit = 8): string[] {
+    const q = query.trim().toLowerCase();
+    if (q.length < 2) return [];
+    return roleSuggestionPool.filter(t => t.toLowerCase().includes(q)).slice(0, limit);
+  }
+  const roleSuggestions = useMemo(
+    () => matchRoleSuggestions(roleQueryDraft),
+    [roleQueryDraft, roleSuggestionPool]
+  );
+  // Safety net on the general-application form's "desired role" field: if
+  // what's typed there strongly matches a real open campaign, surface it
+  // so the candidate can redirect themselves to that specific role's own
+  // apply flow (correct campaign_id, tailored screening) instead of
+  // landing in the generic bucket for something that's already listed.
+  function matchOpenCampaigns(query: string, limit = 3): PublicCampaign[] {
+    const q = query.trim().toLowerCase();
+    if (q.length < 2) return [];
+    return campaigns.filter(camp =>
+      camp.job_code !== GENERAL_APPLICATION_JOB_CODE && camp.is_open && camp.role.toLowerCase().includes(q)
+    ).slice(0, limit);
+  }
+
+  useEffect(() => {
+    function handleClickOutsideRoleField(e: MouseEvent) {
+      if (roleFieldRef.current && !roleFieldRef.current.contains(e.target as Node)) {
+        setRoleSuggestOpen(false);
+      }
+    }
+    if (roleSuggestOpen) {
+      document.addEventListener("mousedown", handleClickOutsideRoleField);
+      return () => document.removeEventListener("mousedown", handleClickOutsideRoleField);
+    }
+  }, [roleSuggestOpen]);
+
+  // Applies a role text + city together and jumps to the results -- shared
+  // by the SEARCH button/Enter key (using the current drafts) and clicking
+  // an autocomplete suggestion (using that suggestion directly, so it
+  // doesn't wait on the draft state update landing first).
+  function applySearch(role: string, city: string) {
+    setRoleQuery(role);
+    setCityFilter(city);
+    setSelectedDepartment(null);
+    document.getElementById("role-tiles")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  function runSearch() {
+    applySearch(roleQueryDraft, cityFilterDraft);
+  }
+
+  // Opens the one catch-all campaign's apply form, pre-filling its
+  // "desired role" field with whatever text produced zero real matches --
+  // only reachable from a genuinely empty search result (see the "no
+  // results" panel below), so it can never be used for a role that
+  // already has a real, specific campaign to apply through instead.
+  function openGeneralApplication(desiredRole: string) {
+    if (!generalApplicationCampaign) return;
+    setSelected(generalApplicationCampaign.id);
+    setViewStage("form");
+    setCandidate(v => ({
+      ...v,
+      location: generalApplicationCampaign.locations.length === 1 ? generalApplicationCampaign.locations[0] : "",
+      open_to_relocate: false,
+    }));
+    setAnswers({ desired_role: desiredRole });
+    setTouched({});
+    invalidate();
+  }
 
   function updateCityBarScrollState() {
     const el = cityBarRef.current;
@@ -310,18 +531,74 @@ export default function HiringApplication() {
   useEffect(() => {
     updateCityBarScrollState();
   }, [allCities]);
+  // Backs the city filter's searchable dropdown so it isn't limited to
+  // cities that already have a role -- queries India Post's public postal
+  // API (any city/town/village in the country) via our own proxy route.
+  async function searchLocations(query: string): Promise<string[]> {
+    const r = await fetch(`${BASE_PATH}/api/location-search?q=${encodeURIComponent(query)}`);
+    if (!r.ok) return [];
+    const body = await r.json();
+    return (body.locations as { name: string }[] | undefined)?.map(l => l.name) || [];
+  }
+  // A city picked from the India Post search (see asyncSearch below) may
+  // not be one anyone's hiring in yet -- in that case the filter is
+  // informational only (see the banner near the role grid) rather than
+  // hiding every role, since "no roles match" would otherwise dead-end a
+  // candidate from a place Chirayu Power just doesn't have a listing for.
+  const cityFilterHasRoles = !cityFilter || allCities.includes(cityFilter);
   const visibleCampaigns = useMemo(() => {
     const q = roleQuery.trim().toLowerCase();
     return campaigns
       .filter(role => {
-        const matchesQuery = !q || role.role.toLowerCase().includes(q) || role.locations.some(l => l.toLowerCase().includes(q));
-        const matchesCity = !cityFilter || role.locations.includes(cityFilter);
+        const matchesQuery =
+          !q ||
+          role.role.toLowerCase().includes(q) ||
+          role.locations.some(l => l.toLowerCase().includes(q)) ||
+          departmentForRole(role.role).toLowerCase().includes(q);
+        const matchesCity = !cityFilterHasRoles || !cityFilter || role.locations.includes(cityFilter);
         return matchesQuery && matchesCity;
       })
       // Open roles first, closed roles last; alphabetical order (already the
       // fetch order) is preserved within each group since sort is stable.
       .sort((a, b) => Number(b.is_open) - Number(a.is_open));
-  }, [campaigns, roleQuery, cityFilter]);
+  }, [campaigns, roleQuery, cityFilter, cityFilterHasRoles]);
+  // Departments as the first layer, roles nested beneath -- ordered by the
+  // company's real department list, with any unrecognized role titles
+  // grouped under a trailing "Other" bucket instead of being dropped.
+  //
+  // Each department also carries the full reference role list from the
+  // company's designation document (independent of whether any of those
+  // exact titles currently have a live campaign -- HR's free-text campaign
+  // titles don't reliably match the document's phrasing, so these are shown
+  // as a separate "full structure" reference rather than merged 1:1 with the
+  // open-role tiles above them). Hidden when a city filter is active since
+  // the reference roles have no location data to filter by.
+  const groupedByDepartment = useMemo(() => {
+    const q = roleQuery.trim().toLowerCase();
+    const openByDept = new Map<string, PublicCampaign[]>();
+    for (const role of visibleCampaigns) {
+      const dept = departmentForRole(role.role);
+      if (!openByDept.has(dept)) openByDept.set(dept, []);
+      openByDept.get(dept)!.push(role);
+    }
+    const order: (Department | "Other")[] = [...DEPARTMENT_ORDER, "Other"];
+    return order
+      .map(dept => {
+        const openRoles = openByDept.get(dept) || [];
+        const canonical = dept === "Other" ? [] : DEPARTMENT_ROLES[dept as Department];
+        const directoryRoles = cityFilter && cityFilterHasRoles
+          ? []
+          : canonical.filter(r => !q || r.title.toLowerCase().includes(q) || dept.toLowerCase().includes(q));
+        return { department: dept, openRoles, directoryRoles };
+      })
+      .filter(g => g.openRoles.length > 0 || g.directoryRoles.length > 0);
+  }, [visibleCampaigns, roleQuery, cityFilter, cityFilterHasRoles]);
+  // No active search and no department picked yet -- the top-level
+  // department picker grid, not the role listing, is what's shown.
+  const isBrowsingAllDepartments = !selectedDepartment && !roleQuery && !cityFilter;
+  const departmentsToRender = selectedDepartment
+    ? groupedByDepartment.filter(g => g.department === selectedDepartment)
+    : groupedByDepartment;
   const totalActiveJobs = campaigns.length;
   const yearsLabel = (role: Pick<PublicCampaign, "min_years" | "max_years">) =>
     `${role.min_years}${role.max_years !== null ? ` - ${role.max_years}` : "+"} years`;
@@ -543,32 +820,60 @@ export default function HiringApplication() {
                     )}
                   </p>
                   <div className="job-hero-search">
-                    <div className="job-hero-field">
+                    <div className="job-hero-field job-hero-role" ref={roleFieldRef}>
                       <Search size={18} aria-hidden="true" />
                       <input
                         type="search"
-                        value={roleQuery}
-                        onChange={e => setRoleQuery(e.target.value)}
+                        value={roleQueryDraft}
+                        onChange={e => { setRoleQueryDraft(e.target.value); setRoleSuggestOpen(true); }}
+                        onFocus={() => setRoleSuggestOpen(true)}
+                        onKeyDown={e => {
+                          if (e.key === "Enter") { setRoleSuggestOpen(false); runSearch(); }
+                          else if (e.key === "Escape") setRoleSuggestOpen(false);
+                        }}
                         placeholder="Search Job Title, Role"
                         aria-label="Search job title or role"
+                        role="combobox"
+                        aria-expanded={roleSuggestOpen && roleSuggestions.length > 0}
+                        aria-autocomplete="list"
+                        autoComplete="off"
                       />
+                      {roleSuggestOpen && roleSuggestions.length > 0 && (
+                        <ul className="job-hero-suggestions" role="listbox">
+                          {roleSuggestions.map(s => (
+                            <li key={s} role="option" aria-selected={false}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setRoleQueryDraft(s);
+                                  setRoleSuggestOpen(false);
+                                  applySearch(s, cityFilterDraft);
+                                }}
+                              >
+                                {s}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                     <div className="job-hero-divider" aria-hidden="true" />
                     <div className="job-hero-field job-hero-city">
                       <MapPin size={18} aria-hidden="true" />
                       <SearchableSelect
                         options={allCities}
-                        value={cityFilter}
-                        onChange={setCityFilter}
+                        value={cityFilterDraft}
+                        onChange={setCityFilterDraft}
                         placeholder="Select City"
                         ariaLabel="Select city"
                         className="job-hero-city-select"
+                        asyncSearch={searchLocations}
                       />
                     </div>
                     <button
                       type="button"
                       className="job-hero-search-btn"
-                      onClick={() => document.getElementById("role-tiles")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                      onClick={runSearch}
                     >
                       SEARCH
                     </button>
@@ -589,7 +894,7 @@ export default function HiringApplication() {
 
           <nav className="hiring-steps" aria-label="Application progress">
             <button type="button" className={!c ? "current" : ""} onClick={() => setSelected("")}>
-              01 · Select role
+              01 · Departments / Roles
             </button>
             <button
               type="button"
@@ -610,53 +915,183 @@ export default function HiringApplication() {
           </nav>
 
           {loading && <p role="status">Loading opportunities…</p>}
-          {!loading && !campaigns.length && !error && (
-            <section className="hiring-panel">There are no open campaigns right now. Please check back soon.</section>
+
+          {!c && !loading && cityFilter && !cityFilterHasRoles && (
+            <p className="city-no-roles-banner" role="status">
+              We don&rsquo;t have open roles in <strong>{cityFilter}</strong> right now.
+              {allCities.length > 0 && <> We&rsquo;re currently hiring in: {allCities.join(", ")}.</>} Browse all open roles below.
+            </p>
           )}
 
-          {!c && !loading && campaigns.length > 0 && (
+          {!c && !loading && (
             <section className="role-tiles-panel" id="role-tiles">
               <div className="role-tiles-tabs">
-                <span className="current">Top Job Roles</span>
+                <span className="current">Departments &amp; Roles</span>
               </div>
 
-              {!visibleCampaigns.length && (
-                <p role="status">No open roles match your search.</p>
-              )}
-
-              <div className="role-tiles-grid">
-                {visibleCampaigns.map(role => {
-                  const Icon = roleIcon(role.role);
-                  return (
+              {isBrowsingAllDepartments ? (
+                <div className="role-tiles-grid">
+                  {groupedByDepartment.map(({ department, openRoles }) => {
+                    const Icon = DEPARTMENT_ICONS[department];
+                    const total = department === "Other" ? openRoles.length : DEPARTMENT_ROLES[department].length;
+                    return (
+                      <button
+                        type="button"
+                        key={department}
+                        className="role-tile role-tile-plain"
+                        onClick={() => {
+                          setSelectedDepartment(department);
+                          document.getElementById("role-tiles")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                        }}
+                      >
+                        <span className="role-tile-card">
+                          <span className="role-tile-icon"><Icon size={26} /></span>
+                          <strong>{department}</strong>
+                          <span className="role-tile-count">
+                            {total} {total === 1 ? "role" : "roles"}{openRoles.length > 0 ? ` · ${openRoles.length} open` : ""}
+                          </span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <>
+                  {selectedDepartment && (
                     <button
                       type="button"
-                      disabled={busy}
-                      aria-pressed={selected === role.id}
-                      key={role.id}
-                      onClick={() => {
-                        setSelected(role.id);
-                        setViewStage("detail");
-                        setCandidate(v => ({ ...v, location: role.locations.length === 1 ? role.locations[0] : "" }));
-                        setAnswers({});
-                        setTouched({});
-                        invalidate();
-                      }}
-                      className={`role-tile ${selected === role.id ? "selected" : ""} ${role.is_open ? "is-open" : "is-closed"}`}
+                      className="dept-back-btn"
+                      onClick={() => setSelectedDepartment(null)}
                     >
-                      <span className="role-tile-card">
-                        <span className="role-tile-icon"><Icon size={26} /></span>
-                        <strong>{role.role}</strong>
-                        <span className="role-tile-count">
-                          {role.locations.length === 1 ? role.locations[0] : `${role.locations.length} locations`}
-                        </span>
-                      </span>
-                      <span className={role.is_open ? "role-tile-ribbon role-tile-ribbon-open" : "role-tile-ribbon role-tile-ribbon-closed"}>
-                        {role.is_open ? "Open" : "Closed"}
-                      </span>
+                      <ArrowLeft size={15} aria-hidden="true" /> All departments
                     </button>
-                  );
-                })}
-              </div>
+                  )}
+
+                  {!departmentsToRender.length && (
+                    <div className="no-results-panel" role="status">
+                      <p>
+                        No departments or roles match{roleQuery ? ` "${roleQuery}"` : " your search"}.
+                      </p>
+                      {generalApplicationCampaign && (
+                        <>
+                          <p>Don&rsquo;t see the exact role you&rsquo;re looking for? You can still apply and tell us what you&rsquo;re interested in.</p>
+                          <button
+                            type="button"
+                            className="no-results-apply-btn"
+                            onClick={() => openGeneralApplication(roleQuery)}
+                          >
+                            Submit a general application →
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {departmentsToRender.map(({ department, openRoles, directoryRoles }) => (
+                <div className="dept-group" key={department}>
+                  <h2 className="dept-group-title">
+                    {department}
+                    {openRoles.length > 0 && (
+                      <span className="dept-group-count">{openRoles.length} open</span>
+                    )}
+                  </h2>
+
+                  {openRoles.length > 0 && (() => {
+                    const previewRole = openRoles.find(r => r.id === previewRoleId) || openRoles[0];
+                    const canonicalMatch = previewRole ? matchCanonicalRole(department, previewRole.role) : null;
+                    return (
+                      <div className="role-tiles-grid">
+                        {previewRole && (
+                          <div className="dept-role-preview" aria-live="polite">
+                            <h3>{previewRole.role}</h3>
+                            <div className="dept-role-preview-meta">
+                              <span><MapPin size={13} aria-hidden="true" /> {locationLabel(previewRole)}</span>
+                              <span><Briefcase size={13} aria-hidden="true" /> {yearsLabel(previewRole)}</span>
+                              <span><Building2 size={13} aria-hidden="true" /> {previewRole.workplace_type}</span>
+                            </div>
+                            {canonicalMatch ? (
+                              <div className="dept-role-preview-doc">
+                                <p><strong>Task:</strong> {canonicalMatch.task}</p>
+                                <p>📅 <strong>Duration:</strong> {canonicalMatch.duration}</p>
+                              </div>
+                            ) : (
+                              <>
+                                <p className="dept-role-preview-desc">{previewRole.description}</p>
+                                {previewRole.responsibilities.length > 0 && (
+                                  <ul>
+                                    {previewRole.responsibilities.slice(0, 3).map((item, i) => <li key={i}>{item}</li>)}
+                                  </ul>
+                                )}
+                              </>
+                            )}
+                            <button
+                              type="button"
+                              className="dept-role-preview-link"
+                              onClick={() => {
+                                setSelected(previewRole.id);
+                                setViewStage("detail");
+                                setCandidate(v => ({ ...v, location: previewRole.locations.length === 1 ? previewRole.locations[0] : "", open_to_relocate: false }));
+                                setAnswers({});
+                                setTouched({});
+                                invalidate();
+                              }}
+                            >
+                              View full details →
+                            </button>
+                          </div>
+                        )}
+
+                        {openRoles.map(role => {
+                          const Icon = roleIcon(role.role);
+                          return (
+                            <button
+                              type="button"
+                              disabled={busy}
+                              aria-pressed={selected === role.id}
+                              key={role.id}
+                              onMouseEnter={() => setPreviewRoleId(role.id)}
+                              onFocus={() => setPreviewRoleId(role.id)}
+                              onClick={() => {
+                                setSelected(role.id);
+                                setViewStage("detail");
+                                setCandidate(v => ({ ...v, location: role.locations.length === 1 ? role.locations[0] : "", open_to_relocate: false }));
+                                setAnswers({});
+                                setTouched({});
+                                invalidate();
+                              }}
+                              className={`role-tile ${selected === role.id ? "selected" : ""} ${role.is_open ? "is-open" : "is-closed"}`}
+                            >
+                              <span className="role-tile-card">
+                                <span className="role-tile-icon"><Icon size={26} /></span>
+                                <strong>{role.role}</strong>
+                                <span className="role-tile-count">
+                                  {role.locations.length === 1 ? role.locations[0] : `${role.locations.length} locations`}
+                                </span>
+                              </span>
+                              <span className={role.is_open ? "role-tile-ribbon role-tile-ribbon-open" : "role-tile-ribbon role-tile-ribbon-closed"}>
+                                {role.is_open ? "Open" : "Closed"}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+
+                  {directoryRoles.length > 0 && (
+                    <>
+                      <p className="dept-directory-label">Full role structure at Chirayu Power</p>
+                      <ul className="dept-directory-list">
+                        {directoryRoles.map(r => (
+                          <li key={r.title} className="dept-directory-item" title={`${r.task} Duration: ${r.duration}`}>{r.title}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </div>
+                  ))}
+                </>
+              )}
             </section>
           )}
 
@@ -693,7 +1128,9 @@ export default function HiringApplication() {
                         className={`city-tile ${cityFilter === city ? "selected" : ""}`}
                         aria-pressed={cityFilter === city}
                         onClick={() => {
-                          setCityFilter(prev => (prev === city ? "" : city));
+                          const next = cityFilter === city ? "" : city;
+                          setCityFilter(next);
+                          setCityFilterDraft(next);
                           document.getElementById("role-tiles")?.scrollIntoView({ behavior: "smooth", block: "start" });
                         }}
                       >
@@ -858,39 +1295,83 @@ export default function HiringApplication() {
               <form ref={form} onSubmit={e => { e.preventDefault(); void submit(); }}>
                 <fieldset disabled={busy}>
                   <div className="hiring-fields">
-                    {/* Location - Searchable if > 3 options */}
+                    {/* Location: State -> District, or "open to relocate anywhere" */}
                     <label>
                       Preferred location *
-                      {c.locations.length > 3 ? (
-                        <SearchableSelect
-                          options={c.locations}
-                          value={candidate.location}
-                          placeholder="Search or select location..."
-                          className={touched.location ? (errors.location ? "is-invalid" : "is-valid") : ""}
-                          onBlur={() => markTouched("location")}
-                          onChange={val => {
-                            setCandidate({ ...candidate, location: val });
+                      <label className="relocate-checkbox-row">
+                        <input
+                          type="checkbox"
+                          checked={candidate.open_to_relocate}
+                          onChange={e => {
+                            const checked = e.target.checked;
+                            setCandidate({ ...candidate, open_to_relocate: checked, location: checked ? "Open to relocate" : "" });
                             markTouched("location");
                             invalidate();
                           }}
                         />
+                        I am comfortable to relocate to any location
+                      </label>
+
+                      {candidate.open_to_relocate ? (
+                        <p className="field-hint">
+                          Currently we have openings in {formatStateList(Object.keys(locationsByState))}.
+                        </p>
                       ) : (
-                        <select
-                          required
-                          className={touched.location ? (errors.location ? "is-invalid" : "is-valid") : ""}
-                          value={candidate.location}
-                          onBlur={() => markTouched("location")}
-                          onChange={e => {
-                            setCandidate({ ...candidate, location: e.target.value });
-                            markTouched("location");
-                            invalidate();
-                          }}
-                        >
-                          <option value="">Select a location</option>
-                          {c.locations.map(l => (
-                            <option key={l} value={l}>{l}</option>
-                          ))}
-                        </select>
+                        <div className="location-select-row">
+                          <select
+                            required
+                            aria-label="State"
+                            className={touched.location ? (errors.location ? "is-invalid" : "is-valid") : ""}
+                            value={selectedState}
+                            onBlur={() => markTouched("location")}
+                            onChange={e => {
+                              setSelectedState(e.target.value);
+                              setCandidate({ ...candidate, location: "" });
+                              invalidate();
+                            }}
+                          >
+                            <option value="">Select a state</option>
+                            {Object.keys(locationsByState).sort((a, b) => a.localeCompare(b)).map(state => (
+                              <option key={state} value={state}>{state}</option>
+                            ))}
+                          </select>
+
+                          {districtsInState.length > 3 ? (
+                            <SearchableSelect
+                              options={districtsInState}
+                              value={candidate.location}
+                              disabled={!selectedState}
+                              placeholder={selectedState ? "Search or select district..." : "Select a state first"}
+                              ariaLabel="District"
+                              className={touched.location ? (errors.location ? "is-invalid" : "is-valid") : ""}
+                              onBlur={() => markTouched("location")}
+                              onChange={val => {
+                                setCandidate({ ...candidate, location: val });
+                                markTouched("location");
+                                invalidate();
+                              }}
+                            />
+                          ) : (
+                            <select
+                              required
+                              aria-label="District"
+                              disabled={!selectedState}
+                              className={touched.location ? (errors.location ? "is-invalid" : "is-valid") : ""}
+                              value={candidate.location}
+                              onBlur={() => markTouched("location")}
+                              onChange={e => {
+                                setCandidate({ ...candidate, location: e.target.value });
+                                markTouched("location");
+                                invalidate();
+                              }}
+                            >
+                              <option value="">{selectedState ? "Select a district" : "Select a state first"}</option>
+                              {districtsInState.map(l => (
+                                <option key={l} value={l}>{l}</option>
+                              ))}
+                            </select>
+                          )}
+                        </div>
                       )}
                       {touched.location && errors.location && (
                         <span className="field-error-msg">{errors.location}</span>
@@ -1074,6 +1555,31 @@ export default function HiringApplication() {
                           {isFieldTouched && fieldError && (
                             <span className="field-error-msg">{fieldError}</span>
                           )}
+                          {f.id === "desired_role" && c.job_code === GENERAL_APPLICATION_JOB_CODE && (() => {
+                            const matches = matchOpenCampaigns(answers[f.id] || "");
+                            if (!matches.length) return null;
+                            return (
+                              <div className="desired-role-nudge">
+                                <p>We have {matches.length === 1 ? "an open role" : "open roles"} matching this:</p>
+                                {matches.map(m => (
+                                  <button
+                                    type="button"
+                                    key={m.id}
+                                    onClick={() => {
+                                      setSelected(m.id);
+                                      setViewStage("detail");
+                                      setCandidate(v => ({ ...v, location: m.locations.length === 1 ? m.locations[0] : "", open_to_relocate: false }));
+                                      setAnswers({});
+                                      setTouched({});
+                                      invalidate();
+                                    }}
+                                  >
+                                    {m.role} — apply to this specific role instead →
+                                  </button>
+                                ))}
+                              </div>
+                            );
+                          })()}
                         </label>
                       );
                     })}
