@@ -1295,8 +1295,14 @@ export default function HiringApplication() {
               <form ref={form} onSubmit={e => { e.preventDefault(); void submit(); }}>
                 <fieldset disabled={busy}>
                   <div className="hiring-fields">
-                    {/* Location: State -> District, or "open to relocate anywhere" */}
-                    <label>
+                    {/* Location: State -> District, or "open to relocate anywhere".
+                        A plain div, not a <label> -- this wraps a composite group
+                        (checkbox OR a pair of selects), not one single control, and
+                        a <label> nested inside another <label> (the checkbox's own
+                        one below) is invalid HTML with unreliable click/focus
+                        behavior. .field-group in hiring.css matches this div to the
+                        same grid-cell layout .hiring-fields label gets. */}
+                    <div className="field-group">
                       Preferred location *
                       <label className="relocate-checkbox-row">
                         <input
@@ -1314,7 +1320,7 @@ export default function HiringApplication() {
 
                       {candidate.open_to_relocate ? (
                         <p className="field-hint">
-                          Currently we have openings in {formatStateList(Object.keys(locationsByState))}.
+                          This role is currently open in {formatStateList(Object.keys(locationsByState))} -- HR will match you to the closest fit.
                         </p>
                       ) : (
                         <div className="location-select-row">
@@ -1376,7 +1382,7 @@ export default function HiringApplication() {
                       {touched.location && errors.location && (
                         <span className="field-error-msg">{errors.location}</span>
                       )}
-                    </label>
+                    </div>
 
                     {/* Full Name */}
                     <label>

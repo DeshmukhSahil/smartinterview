@@ -161,7 +161,8 @@
   gap: 22px;
 }
 
-.hiring-fields label {
+.hiring-fields label,
+.hiring-fields .field-group {
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.01em;
@@ -172,7 +173,11 @@
   color: #243e5a;
 }
 
-.hiring-fields input,
+/* :not([type="checkbox"]) -- this rule is meant for text-style fields;
+   without the exclusion it also matches the relocate checkbox nested in
+   the "Preferred location" field, padding/bordering a 15x15 checkbox as
+   if it were a full text input and blowing it up into a stray box. */
+.hiring-fields input:not([type="checkbox"]),
 .hiring-fields select,
 .hiring-fields textarea {
   background: white;
@@ -255,9 +260,21 @@
   color: #4a5c72;
 }
 
+/* !important throughout -- solar-grid.css's `.solar-hiring .hiring-fields
+   input, textarea, select { width: 100% }` has the exact same specificity
+   as this selector and loads after hiring.css, so on a tie it would win
+   and stretch this checkbox to fill the row (the elongated-box bug).
+   !important is the only way to make this checkbox's own sizing reliably
+   win regardless of import order or what any current/future theme layer
+   declares for generic .hiring-fields inputs. */
 .relocate-checkbox-row input[type="checkbox"] {
-  width: 15px;
-  height: 15px;
+  width: 15px !important;
+  height: 15px !important;
+  min-width: 15px !important;
+  padding: 0 !important;
+  border: 1px solid #c9d6e2 !important;
+  border-radius: 3px !important;
+  background: white !important;
   accent-color: #1686ce;
   flex-shrink: 0;
 }
