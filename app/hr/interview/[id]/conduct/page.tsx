@@ -1,26 +1,38 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Loader2, ExternalLink, Mic, MicOff, ArrowRight, Sparkles } from "lucide-react";
+import { Loader2, ExternalLink, ArrowRight, Sparkles, Laptop } from "lucide-react";
 import { useHrSession } from "@/hooks/use-hr-session";
 import { hrFetch } from "@/lib/hrApi";
-import { useSpeechTranscript } from "@/hooks/use-speech-transcript";
 import { cn } from "@/lib/utils";
 import { ROUND_LABELS, roundSchema, type Round } from "@/lib/hiring/schema";
 
-// The AI "listens throughout" this way: this page runs continuous browser speech-to-text
-// (the same mechanism the AI-assisted interview uses) on the HR side while the actual
-// interview happens in Teams, periodically flushing the captured transcript to the
-// server, which re-drafts AI notes shown live below. See the plan's note on why this is
-// mic-pickup-dependent rather than a true Teams-side transcript.
-//
-// Generalized (Interview Notes Engine, Phase 1) to work for every human round, not just
-// the original one-on-one screening call — `round` in the URL picks which one; each
-// round gets its own transcript/notes row in round_notes (migrations/20260922_round_notes.sql).
-const FLUSH_INTERVAL_MS = 25000;
+// Read-only live status, not a capture control. Notes are now captured
+// automatically by AI-Transcribe on the interviewer's machine (auto-launched
+// off the ERP's interview schedule, transcript_source "desktop_app"), relayed
+// through the ERP into round_notes -- see lib/hiring/server.ts
+// ingestRoundTranscript() and app/api/hiring/interview/[id]/notes/ingest.
+// This page just polls round_notes so HR can see unattended capture is
+// actually working, with no start/stop button to forget to press.
+const POLL_INTERVAL_MS = 10000;
+
+const SOURCE_LABELS: Record<string, string> = {
+  desktop_app: "AI Transcribe (desktop)",
+  mic: "Browser microphone",
+  graph_transcript: "Teams transcript",
+  manual_upload: "Manually uploaded",
+};
+
+function timeAgo(iso: string) {
+  const seconds = Math.max(0, Math.floor((Date.now() - Date.parse(iso)) / 1000));
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  return `${Math.floor(minutes / 60)}h ago`;
+}
 
 export default function HrConductInterviewPage() {
   const params = useParams();
@@ -32,16 +44,8 @@ export default function HrConductInterviewPage() {
 
   const [interview, setInterview] = useState<any | null>(null);
   const [fetching, setFetching] = useState(true);
-  const [callActive, setCallActive] = useState(false);
-  const [transcriptLog, setTranscriptLog] = useState<{ role: "unknown"; content: string }[]>([]);
-  const [notes, setNotes] = useState<any | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const { isListening, userAnswer, setUserAnswer, interimText, forceStartListening, stopListening } = useSpeechTranscript({
-    active: callActive, paused: false, micPermission: "granted",
-  });
-
-  const flushTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [roundRow, setRoundRow] = useState<any | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     if (!loading && !session) router.replace("/hr/login");
@@ -49,61 +53,29 @@ export default function HrConductInterviewPage() {
 
   useEffect(() => {
     if (!accessToken) return;
-    (async () => {
+    let cancelled = false;
+    async function load() {
       try {
-        const json = await hrFetch(accessToken, `/api/hiring/interview/${id}`);
+        const json = await hrFetch(accessToken!, `/api/hiring/interview/${id}`);
+        if (cancelled) return;
         setInterview(json.interview);
-        // json.interview is only pre-filled with the SCREENING round's data (backward
-        // compatibility for the original flow) — every round, screening included, reads
-        // its own row out of round_notes here instead.
-        const roundRow = (json.round_notes || []).find((rn: any) => rn.round === round);
-        setTranscriptLog(roundRow?.live_transcript || []);
-        setNotes(roundRow?.ai_draft || null);
+        setRoundRow((json.round_notes || []).find((rn: any) => rn.round === round) || null);
       } catch (e: any) {
-        toast.error(e.message || "Failed to load interview");
+        if (!cancelled) toast.error(e.message || "Failed to load interview");
       } finally {
-        setFetching(false);
+        if (!cancelled) setFetching(false);
       }
-    })();
+    }
+    load();
+    const poll = setInterval(load, POLL_INTERVAL_MS);
+    const clock = setInterval(() => setNow(Date.now()), 1000);
+    return () => { cancelled = true; clearInterval(poll); clearInterval(clock); };
   }, [accessToken, id, round]);
 
-  const flush = async (finalChunk?: string) => {
-    if (!accessToken) return;
-    const pending = (finalChunk ?? userAnswer).trim();
-    const nextLog = pending ? [...transcriptLog, { role: "unknown" as const, content: pending }] : transcriptLog;
-    if (pending) {
-      setTranscriptLog(nextLog);
-      setUserAnswer("");
-    }
-    if (nextLog.length === 0) return;
-    setRefreshing(true);
-    try {
-      const json = await hrFetch(accessToken, `/api/hiring/interview/${id}/notes/draft`, {
-        method: "POST",
-        body: JSON.stringify({ transcript: nextLog, round }),
-      });
-      setNotes(json.notes);
-    } catch (e: any) {
-      console.error("Failed to refresh AI notes", e);
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  const startCapturing = () => {
-    setCallActive(true);
-    forceStartListening();
-    flushTimerRef.current = setInterval(() => { flush(); }, FLUSH_INTERVAL_MS);
-  };
-
-  const stopCapturing = async () => {
-    setCallActive(false);
-    stopListening();
-    if (flushTimerRef.current) clearInterval(flushTimerRef.current);
-    await flush();
-  };
-
-  useEffect(() => () => { if (flushTimerRef.current) clearInterval(flushTimerRef.current); }, []);
+  const transcriptLog = roundRow?.live_transcript || [];
+  const notes = roundRow?.ai_draft || null;
+  const hasCapture = !!roundRow?.updated_at;
+  const staleSeconds = roundRow?.updated_at ? Math.floor((now - Date.parse(roundRow.updated_at)) / 1000) : null;
 
   if (loading || (session && fetching)) {
     return (
@@ -117,7 +89,7 @@ export default function HrConductInterviewPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-10 space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-dark-100">Conduct interview — {ROUND_LABELS[round]}</h1>
+        <h1 className="text-xl font-bold text-dark-100">Interview status — {ROUND_LABELS[round]}</h1>
         <p className="text-xs text-soft-gray">{interview.role} · {interview.candidate_name}</p>
       </div>
 
@@ -136,36 +108,39 @@ export default function HrConductInterviewPage() {
             <p className="text-xs text-soft-gray">No Teams link on this interview yet.</p>
           )}
         </div>
-        <button
-          onClick={callActive ? stopCapturing : startCapturing}
+        <span
           className={cn(
-            "inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition border",
-            callActive ? "bg-red-50 border-red-200 text-red-600" : "bg-success-green text-white border-transparent"
+            "inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border",
+            hasCapture && staleSeconds !== null && staleSeconds < 90
+              ? "bg-green-50 border-green-200 text-success-green"
+              : "bg-gray-50 border-border-gray text-soft-gray"
           )}
         >
-          {callActive ? <><MicOff size={15} /> Stop AI note capture</> : <><Mic size={15} /> Start AI note capture</>}
-        </button>
+          <Laptop size={14} />
+          {hasCapture
+            ? staleSeconds !== null && staleSeconds < 90
+              ? "Capturing now"
+              : `Last update ${timeAgo(roundRow.updated_at)}`
+            : "Waiting for capture to start"}
+        </span>
       </div>
 
       <p className="text-xs text-soft-gray bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-        Note capture uses your browser&apos;s microphone, best picked up when your speaker/audio is on during the Teams call — it is a best-effort live draft, not an official Teams transcript. Review and edit the notes before submitting the report.
+        Notes are captured automatically by AI Transcribe on the interviewer&apos;s machine, launched from the scheduled interview time — there is nothing to start here. This page just shows that capture is happening; review and edit the notes on the report page before submitting.
       </p>
 
       <div className="grid gap-6 md:grid-cols-2">
         <div className="bg-white border border-border-gray rounded-2xl p-5 h-80 flex flex-col">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold text-dark-100">Live transcript</h2>
-            <span className={cn("text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border", isListening ? "bg-green-50 border-green-200 text-success-green" : "bg-gray-50 border-border-gray text-soft-gray")}>
-              {isListening ? "Listening" : "Paused"}
+            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border bg-gray-50 border-border-gray text-soft-gray">
+              {SOURCE_LABELS[roundRow?.transcript_source] || "Not started"}
             </span>
           </div>
           <div className="flex-1 overflow-y-auto space-y-2 text-xs text-dark-100">
-            {transcriptLog.map((t, i) => <p key={i} className="leading-relaxed">{t.content}</p>)}
-            {(userAnswer || interimText) && (
-              <p className="italic text-soft-gray">{userAnswer} {interimText}</p>
-            )}
-            {transcriptLog.length === 0 && !userAnswer && !interimText && (
-              <p className="text-soft-gray">Start note capture to begin transcribing.</p>
+            {transcriptLog.map((t: { content: string }, i: number) => <p key={i} className="leading-relaxed">{t.content}</p>)}
+            {transcriptLog.length === 0 && (
+              <p className="text-soft-gray">No transcript yet -- this fills in automatically once the scheduled interview starts.</p>
             )}
           </div>
         </div>
@@ -173,7 +148,6 @@ export default function HrConductInterviewPage() {
         <div className="bg-white border border-border-gray rounded-2xl p-5 h-80 flex flex-col">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold text-dark-100 flex items-center gap-1.5"><Sparkles size={14} className="text-primary-blue" /> AI draft notes</h2>
-            {refreshing && <Loader2 className="animate-spin size-3.5 text-soft-gray" />}
           </div>
           {notes ? (
             <div className="flex-1 overflow-y-auto space-y-3 text-xs text-dark-100">

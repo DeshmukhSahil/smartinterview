@@ -102,7 +102,10 @@ export const roundNotesRowSchema = z.object({
   id: z.string().uuid(),
   interview_id: z.string().uuid(),
   round: roundSchema,
-  transcript_source: z.enum(["mic", "graph_transcript", "manual_upload"]),
+  // "desktop_app" = AI-Transcribe (mic+speaker capture with AEC, via the ERP relay --
+  // see lib/hiring/server.ts ingestRoundTranscript()), replacing the old single-mic
+  // browser capture as the default path for human rounds.
+  transcript_source: z.enum(["mic", "graph_transcript", "manual_upload", "desktop_app"]),
   live_transcript: z.array(transcriptTurnSchema),
   ai_draft: notesSchema.nullable(),
   ai_verified: notesSchema.nullable(),

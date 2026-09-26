@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { campaignSchema, resultSchema, notesSchema, type Campaign, type InterviewNotes, type TranscriptTurn, type Round } from "./schema";
 import { interviewLoginUrl } from "./link";
 
@@ -32,6 +32,20 @@ export async function requireHR(request: Request, action: "view" | "edit") {
     : { _module: "hr", _submodule: "create_interview", _actions: ["add", "edit"] });
   if (rightsError || !data) throw new Error("Forbidden");
   return { email: user.user.email as string };
+}
+// Server-to-server auth for the ERP's interview-transcript-ingest Edge
+// Function (AI-Transcribe -> ERP -> here). Not an HR browser session, so
+// requireHR() doesn't apply -- the ERP has already done the real
+// authorization check (is this caller actually assigned to this
+// interview?) against candidate_pipeline.interviewer_ids before relaying;
+// this secret only proves "the request came from our ERP," same shared-
+// secret idiom the ERP itself uses for its own cron -> Edge Function calls.
+export function requireIngestSecret(request: Request) {
+  const provided = request.headers.get("x-ingest-secret") || "";
+  const expected = env("INTERVIEW_INGEST_SECRET");
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) throw new Error("Unauthorized");
 }
 export function failure(error: unknown, request?: Request) {
   const message = error instanceof Error ? error.message : "Request failed";
@@ -197,6 +211,20 @@ export async function listRoundNotes(interviewId: string) {
 export async function saveRoundDraft(interviewId: string, round: Round, transcript: TranscriptTurn[], notes: InterviewNotes) {
   const { error } = await interviewDb().from("round_notes").upsert(
     { interview_id: interviewId, round, live_transcript: transcript, ai_draft: notes },
+    { onConflict: "interview_id,round" },
+  );
+  if (error) throw error;
+}
+
+// Like saveRoundDraft, but explicitly stamps transcript_source -- called
+// once, when AI-Transcribe (via the ERP relay) delivers a finished
+// transcript, rather than repeatedly during a live browser-mic capture.
+// Unlike saveRoundDraft, this always overwrites transcript_source even on
+// an existing row, so it's clear which capture method actually produced
+// the current draft if a round is ever re-captured a different way.
+export async function ingestRoundTranscript(interviewId: string, round: Round, transcript: TranscriptTurn[], notes: InterviewNotes) {
+  const { error } = await interviewDb().from("round_notes").upsert(
+    { interview_id: interviewId, round, transcript_source: "desktop_app", live_transcript: transcript, ai_draft: notes },
     { onConflict: "interview_id,round" },
   );
   if (error) throw error;
