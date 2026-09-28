@@ -19,7 +19,7 @@ const ALLOWED_ORIGINS = [process.env.ERP_ORIGIN, "http://localhost:8080"].filter
 export function cors(request: Request): Record<string, string> {
   const origin = request.headers.get("origin");
   return origin && ALLOWED_ORIGINS.includes(origin)
-    ? { "Access-Control-Allow-Origin": origin, "Access-Control-Allow-Headers": "Authorization, Content-Type, ngrok-skip-browser-warning", "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Vary": "Origin" } : {};
+    ? { "Access-Control-Allow-Origin": origin, "Access-Control-Allow-Headers": "Authorization, Content-Type, ngrok-skip-browser-warning", "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS", "Vary": "Origin" } : {};
 }
 export async function requireHR(request: Request, action: "view" | "edit") {
   const token = request.headers.get("authorization")?.replace(/^Bearer /, "");
