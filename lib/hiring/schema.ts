@@ -3,10 +3,28 @@ import { z } from "zod";
 export const fieldSchema = z.object({
   id: z.string().regex(/^[a-z][a-z0-9_]{0,49}$/),
   label: z.string().trim().min(1).max(200),
-  type: z.enum(["text", "textarea", "number", "select"]),
+  // Beyond HR's own free-form question types (text/textarea/number/select),
+  // the fixed apply-form fields (name/email/phone/resume/consent/location/
+  // work preference) are represented as fields too -- see CORE_FIELDS below
+  // -- so the whole form, not just HR's extra questions, is field-driven and
+  // orderable/labelable/conditionally-visible through one system.
+  type: z.enum([
+    "text", "textarea", "number", "select",
+    "email", "phone", "file", "consent", "location_search", "radio", "checkbox_group",
+  ]),
   required: z.boolean(),
+  // For select/radio/checkbox_group. Ignored for checkbox_group on the one
+  // built-in "comfortable_locations" field, whose real options are the
+  // campaign's own `locations` at render time, not anything stored here.
   options: z.array(z.string().trim().min(1).max(100)).max(30).default([]),
-}).refine(f => f.type !== "select" || f.options.length > 0, "Select fields need options");
+  // Conditional visibility: this field only renders (and, correspondingly,
+  // is not required/validated) when another field's answer equals `value`.
+  // Null = always shown. Evaluated against the same answers map every other
+  // field reads/writes -- core fields included, since they're keyed by
+  // their own CORE_FIELD id (e.g. "work_location_preference") the same way
+  // an HR-authored field is keyed by its own id.
+  condition: z.object({ fieldId: z.string(), value: z.string() }).nullable().default(null),
+}).refine(f => (f.type !== "select" && f.type !== "radio") || f.options.length > 0, "Select/radio fields need options");
 export const campaignSchema = z.object({
   id: z.string().uuid().optional(),
   role: z.string().trim().min(2).max(150),
@@ -48,17 +66,104 @@ export const campaignSchema = z.object({
   if (c.role === "Tendering Manager" && c.locations.some(l => !["Khamgaon", "Nagpur"].includes(l))) fail("Tendering locations must be Khamgaon or Nagpur");
 });
 export type Campaign = z.infer<typeof campaignSchema>;
+export type Field = z.infer<typeof fieldSchema>;
+
+export const CORE_FIELD_IDS = [
+  "name", "email", "phone", "location", "work_location_preference",
+  "comfortable_locations", "years", "resume", "consent",
+] as const;
+export type CoreFieldId = typeof CORE_FIELD_IDS[number];
+
+export const WORK_LOCATION_PREFERENCE_OPTIONS = [
+  "I prefer to work near my current location",
+  "I'm open to relocating for this role",
+];
+
+// Canonical id/type per fixed apply-form field -- these never change no
+// matter what a campaign's stored override says (email must always validate
+// as an email address regardless of what a campaign's own `fields` entry
+// claims), so the rest of the system (screen/submit routes, email delivery,
+// the ERP) can keep reading candidate.email/phone/etc. as a stable, typed
+// contract. label/required/condition/order ARE campaign-configurable, via a
+// same-id entry in that campaign's own `fields` array -- that's the "dynamic
+// with conditions" part: HR can relabel, reorder, make optional, or attach a
+// visibility condition, without the validation semantics ever moving.
+const CORE_FIELD_DEFAULTS: Record<CoreFieldId, { label: string; type: Field["type"] }> = {
+  name: { label: "Full name", type: "text" },
+  email: { label: "Email address", type: "email" },
+  phone: { label: "Phone number", type: "phone" },
+  location: { label: "Current location", type: "location_search" },
+  work_location_preference: { label: "Work location preference", type: "radio" },
+  comfortable_locations: { label: "I am comfortable working at", type: "checkbox_group" },
+  years: { label: "Total experience (years)", type: "number" },
+  resume: { label: "Upload your resume", type: "file" },
+  consent: {
+    label: "I agree to share my application and resume with Chirayu Power HR and to AI-assisted screening through OpenRouter and its model providers. I understand HR makes the final decision.",
+    type: "consent",
+  },
+};
+
+export function isCoreFieldId(id: string): id is CoreFieldId {
+  return (CORE_FIELD_IDS as readonly string[]).includes(id);
+}
+
+// A campaign's `fields` array is the literal, complete source of truth for
+// its apply form -- a field renders and is validated only if it's actually
+// present there. Nothing is synthesized for a missing core field; every
+// campaign needs its own name/email/phone/etc. entries seeded in (see
+// migrations/20260930_seed_core_hiring_fields.sql for the one-time
+// backfill, and the ERP's campaign editor for new campaigns going forward).
+//
+// What this DOES still do: for any field whose id matches a CORE_FIELD_ID,
+// its `type` (and, for work_location_preference, its `options`) are forced
+// to the canonical value from CORE_FIELD_DEFAULTS, regardless of what's
+// stored -- so email always validates as an email, work location preference
+// always offers the same two real choices, etc., even though a campaign is
+// otherwise free to edit that entry's label/required/condition/order.
+export function normalizeCoreFields(fields: Field[]): Field[] {
+  return fields.map(f => {
+    if (!isCoreFieldId(f.id)) return f;
+    const def = CORE_FIELD_DEFAULTS[f.id];
+    return {
+      ...f,
+      type: def.type,
+      options: f.id === "work_location_preference" ? WORK_LOCATION_PREFERENCE_OPTIONS : f.options,
+    };
+  });
+}
+
+// A field's condition (if any) is checked against the same answers a
+// candidate is filling in -- `lookup(fieldId)` returns that field's current
+// string value, or the joined values of a checkbox_group. No condition
+// means always visible/applicable.
+export function conditionMet(field: Field, lookup: (fieldId: string) => string | string[]): boolean {
+  if (!field.condition) return true;
+  const v = lookup(field.condition.fieldId);
+  return Array.isArray(v) ? v.includes(field.condition.value) : v === field.condition.value;
+}
+
 export const applicantSchema = z.object({
   campaign_id: z.string().uuid(), name: z.string().trim().min(2).max(150),
   email: z.string().trim().email().max(254).transform(s => s.toLowerCase()),
   phone: z.string().trim().regex(/^[+\d ()-]{7,25}$/),
-  location: z.string().trim().min(1).max(100), years: z.number().min(0).max(60),
-  // When true, `location` is set to the fixed string "Open to relocate" rather than one
-  // of the role's approved locations -- validateAnswers() skips its usual
-  // c.locations.includes(a.location) check for this case. Stored so HR can filter/see
-  // it, and so the value stays human-readable everywhere `location` is already displayed
-  // without any of those call sites needing to special-case it.
-  open_to_relocate: z.boolean().default(false),
+  // The candidate's own current city (free entry, via the India Post search --
+  // see searchLocations() in app/page.tsx), completely independent of the job's
+  // own approved locations (Campaign.locations). Deliberately not validated
+  // against c.locations: a candidate can live anywhere and still apply for a
+  // role based in a different city, which is the whole point of separating
+  // "where the candidate lives" from "where the role is."
+  // These three, unlike name/email/phone above, are only structurally typed
+  // here -- their actual requiredness is condition-aware and enforced in
+  // validateAnswers() against the campaign's own withCoreFields() config, the
+  // same way an HR custom question's requiredness already worked. That's
+  // what makes them genuinely conditional: a campaign can mark one optional,
+  // or attach a `condition` that hides it (and its requirement) entirely.
+  location: z.string().trim().max(100).default(""), years: z.number().min(0).max(60),
+  work_location_preference: z.enum(["near_current", "open_to_relocate", ""]).default(""),
+  // Only meaningful for a role open in more than one place -- which of the
+  // job's OWN locations the candidate would accept. Not shown/asked at all
+  // for a single-location role, since there's nothing to choose there.
+  comfortable_locations: z.array(z.string().trim().min(1).max(100)).max(100).default([]),
   answers: z.record(z.string().max(50), z.string().max(2000)), consent: z.literal(true),
 });
 export const resultSchema = z.object({
@@ -114,10 +219,46 @@ export const roundNotesRowSchema = z.object({
   submitted_by: z.string().nullable(),
 });
 export type RoundNotesRow = z.infer<typeof roundNotesRowSchema>;
+// Bridges the core answer shape (named properties on `a`) and HR's custom
+// questions (the generic `a.answers` map) into one lookup, so conditionMet()
+// and the requiredness loop below work identically for both kinds of field.
+function coreOrCustomAnswer(a: z.infer<typeof applicantSchema>, fieldId: string): string | string[] {
+  switch (fieldId) {
+    case "name": return a.name;
+    case "email": return a.email;
+    case "phone": return a.phone;
+    case "location": return a.location;
+    case "work_location_preference": return a.work_location_preference;
+    case "comfortable_locations": return a.comfortable_locations;
+    case "years": return String(a.years);
+    case "consent": return a.consent ? "true" : "";
+    case "resume": return ""; // the actual file, never condition-driven
+    default: return a.answers[fieldId] ?? "";
+  }
+}
 export function validateAnswers(c: Campaign, a: z.infer<typeof applicantSchema>) {
-  if (!a.open_to_relocate && !c.locations.includes(a.location)) throw new Error("Choose an available location for this role");
-  if (Object.keys(a.answers).some(id => !c.fields.some(f => f.id === id))) throw new Error("Form changed. Reload and try again");
-  for (const f of c.fields) {
+  if (Object.keys(a.answers).some(id => !c.fields.some(f => f.id === id) && !isCoreFieldId(id))) {
+    throw new Error("Form changed. Reload and try again");
+  }
+  const lookup = (fieldId: string) => coreOrCustomAnswer(a, fieldId);
+  for (const f of normalizeCoreFields(c.fields)) {
+    if (!conditionMet(f, lookup)) continue;
+    if (f.id === "comfortable_locations") {
+      if (c.locations.length > 1 && f.required && !a.comfortable_locations.some(l => c.locations.includes(l))) {
+        throw new Error("Choose at least one location you're comfortable working at for this role");
+      }
+      continue;
+    }
+    // name/email/phone/consent/resume: structurally required and validated
+    // by applicantSchema itself (or, for resume, the upload route) -- always,
+    // not campaign-configurable, so nothing further to check here.
+    if (f.id === "name" || f.id === "email" || f.id === "phone" || f.id === "consent" || f.id === "resume") continue;
+    if (f.id === "location" || f.id === "work_location_preference" || f.id === "years") {
+      const v = lookup(f.id);
+      const empty = Array.isArray(v) ? v.length === 0 : !v.trim();
+      if (f.required && empty) throw new Error(`${f.label} is required`);
+      continue;
+    }
     const v = a.answers[f.id]?.trim() || "";
     if (f.required && !v) throw new Error(`${f.label} is required`);
     if (v && f.type === "select" && !f.options.includes(v)) throw new Error(`Invalid ${f.label}`);

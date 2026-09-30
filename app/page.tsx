@@ -36,9 +36,10 @@ import {
   ShieldCheck,
   Sun,
 } from "lucide-react";
-import type { Campaign } from "@/lib/hiring/schema";
+import type { Campaign, Field } from "@/lib/hiring/schema";
+import { normalizeCoreFields, conditionMet, isCoreFieldId } from "@/lib/hiring/schema";
 import { departmentForRole, DEPARTMENT_ORDER, DEPARTMENT_ROLES, matchCanonicalRole, type Department } from "@/lib/hiring/departments";
-import { groupLocationsByState, stateForLocation, formatStateList } from "@/lib/hiring/locations";
+import { stateForLocation } from "@/lib/hiring/locations";
 import Navbar from "@/components/Navbar";
 import "./hiring.css";
 import { solarFonts } from "./SolarIntro";
@@ -400,16 +401,7 @@ export default function HiringApplication() {
   const [viewStage, setViewStage] = useState<"detail" | "form">("detail");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [candidate, setCandidate] = useState({ name: "", email: "", phone: "", location: "", years: "", consent: false, open_to_relocate: false });
-  // State half of the State -> District location picker. UI-only (not submitted) --
-  // `candidate.location` (the district) is the field of record. Kept in sync below
-  // whenever location changes from elsewhere (switching roles, a single-location role
-  // auto-filling it), not just from this picker's own onChange.
-  const [selectedState, setSelectedState] = useState("");
-  useEffect(() => {
-    if (candidate.open_to_relocate) { setSelectedState(""); return; }
-    setSelectedState(candidate.location ? stateForLocation(candidate.location) : "");
-  }, [candidate.location, candidate.open_to_relocate]);
+  const [candidate, setCandidate] = useState({ name: "", email: "", phone: "", location: "", years: "", consent: false, work_location_preference: "" as "" | "near_current" | "open_to_relocate", comfortable_locations: [] as string[] });
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [hasResume, setHasResume] = useState(false);
@@ -421,11 +413,22 @@ export default function HiringApplication() {
   const [canScrollCitiesRight, setCanScrollCitiesRight] = useState(false);
 
   const c = campaigns.find(c => c.id === selected);
-  // State -> District grouping of the CURRENT role's approved locations, for the
-  // "Preferred location" picker below. Never offers a state/district the role doesn't
-  // actually have.
-  const locationsByState = useMemo(() => groupLocationsByState(c?.locations || []), [c]);
-  const districtsInState = locationsByState[selectedState] || [];
+  // The campaign's own `fields` array is the literal source of truth for
+  // what appears on its apply form -- a field renders only if it's actually
+  // present here (see migrations/20260930_seed_core_hiring_fields.sql for
+  // how every campaign gets its core fields seeded in). normalizeCoreFields
+  // only locks type/options for any core-id entry that IS present; it never
+  // adds one that's missing. One source of truth for both rendering and the
+  // errors computation below, so they can never drift apart.
+  const resolvedFields = useMemo(() => (c ? normalizeCoreFields(c.fields) : []), [c]);
+  // The job's own approved locations, shown as plain read-only text (never a
+  // candidate-selectable dropdown) -- see the "Location" / "Preferred
+  // locations" display below. "City, State" per entry, joined with " · " for
+  // roles open in more than one place.
+  const jobLocationText = useMemo(
+    () => (c?.locations || []).map(loc => `${loc}, ${stateForLocation(loc)}`).join(" · "),
+    [c],
+  );
   const allCities = useMemo(
     () => [...new Set(campaigns.flatMap(role => role.locations))].sort(),
     [campaigns]
@@ -505,11 +508,12 @@ export default function HiringApplication() {
     if (!generalApplicationCampaign) return;
     setSelected(generalApplicationCampaign.id);
     setViewStage("form");
-    setCandidate(v => ({
-      ...v,
-      location: generalApplicationCampaign.locations.length === 1 ? generalApplicationCampaign.locations[0] : "",
-      open_to_relocate: false,
-    }));
+    // Not touching candidate.location/work_location_preference here -- those
+    // describe the candidate, not the job, so switching roles must not reset
+    // or auto-fill them from the newly selected campaign's own locations.
+    // comfortable_locations DOES reset -- it's which of THIS job's own
+    // locations the candidate accepts, meaningless once the job changes.
+    setCandidate(v => ({ ...v, comfortable_locations: [] }));
     setAnswers({ desired_role: desiredRole });
     setTouched({});
     invalidate();
@@ -624,13 +628,70 @@ export default function HiringApplication() {
     setTouched(prev => (prev[fieldKey] ? prev : { ...prev, [fieldKey]: true }));
   };
 
+  // Bridges the core answer shape (named `candidate` properties) and HR's
+  // custom questions (the generic `answers` map) into one accessor, so the
+  // unified field-rendering loop and conditionMet() work identically for
+  // both -- mirrors coreOrCustomAnswer() server-side in lib/hiring/schema.ts.
+  const getFieldValue = (fieldId: string): string | string[] => {
+    switch (fieldId) {
+      case "name": return candidate.name;
+      case "email": return candidate.email;
+      case "phone": return candidate.phone;
+      case "location": return candidate.location;
+      case "work_location_preference": return candidate.work_location_preference;
+      case "comfortable_locations": return candidate.comfortable_locations;
+      case "years": return candidate.years;
+      case "consent": return candidate.consent ? "true" : "";
+      case "resume": return hasResume ? "true" : "";
+      default: return answers[fieldId] || "";
+    }
+  };
+
+  // A custom field that becomes hidden (its condition no longer met, e.g.
+  // the candidate changed an earlier answer) shouldn't leave a stale value
+  // sitting in `answers` to be silently submitted -- validateAnswers()
+  // already ignores it server-side, but there's no reason to send it at
+  // all. Only touches answers whose field is genuinely hidden right now;
+  // guarded so it only ever fires once per actual change, not every render.
+  useEffect(() => {
+    if (!c) return;
+    const hiddenIds = resolvedFields
+      .filter(f => !isCoreFieldId(f.id) && !conditionMet(f, getFieldValue))
+      .map(f => f.id);
+    if (hiddenIds.length === 0) return;
+    setAnswers(prev => {
+      const next = { ...prev };
+      let changed = false;
+      for (const id of hiddenIds) {
+        if (id in next) {
+          delete next[id];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [c, resolvedFields, answers]);
+
   // Real-time field errors calculation
   const errors = useMemo(() => {
     const errs: Record<string, string> = {};
+    const locationField = resolvedFields.find(f => f.id === "location");
+    const workPrefField = resolvedFields.find(f => f.id === "work_location_preference");
+    const comfortableField = resolvedFields.find(f => f.id === "comfortable_locations");
 
     // 1. Location
-    if (!candidate.location) {
-      errs.location = "Please select a preferred location.";
+    if (locationField && conditionMet(locationField, getFieldValue) && locationField.required && !candidate.location) {
+      errs.location = "Please enter your current location.";
+    }
+    if (workPrefField && conditionMet(workPrefField, getFieldValue) && workPrefField.required && !candidate.work_location_preference) {
+      errs.work_location_preference = "Please select your work location preference.";
+    }
+    if (
+      comfortableField && conditionMet(comfortableField, getFieldValue) && comfortableField.required &&
+      c && c.locations.length > 1 && candidate.comfortable_locations.length === 0
+    ) {
+      errs.comfortable_locations = "Choose at least one location you're comfortable working at.";
     }
 
     // 2. Full Name
@@ -680,9 +741,15 @@ export default function HiringApplication() {
       }
     }
 
-    // 6. Dynamic role-specific fields
-    if (c?.fields) {
-      for (const field of c.fields) {
+    // 6. Dynamic role-specific fields (HR's own custom questions only --
+    // resolvedFields also carries the 9 core fields, already handled above
+    // and via name/email/phone/years/consent below; a campaign-stored
+    // override entry for one of those ids must not be treated as a second,
+    // separate custom question here).
+    for (const field of resolvedFields) {
+      if (isCoreFieldId(field.id)) continue;
+      if (!conditionMet(field, getFieldValue)) continue;
+      {
         const val = answers[field.id] !== undefined ? String(answers[field.id]).trim() : "";
         if (field.required && !val) {
           errs[field.id] = `${field.label} is required.`;
@@ -725,6 +792,8 @@ export default function HiringApplication() {
   function markAllTouched() {
     const all: Record<string, boolean> = {
       location: true,
+      work_location_preference: true,
+      comfortable_locations: true,
       name: true,
       email: true,
       phone: true,
@@ -1030,7 +1099,7 @@ export default function HiringApplication() {
                               onClick={() => {
                                 setSelected(previewRole.id);
                                 setViewStage("detail");
-                                setCandidate(v => ({ ...v, location: previewRole.locations.length === 1 ? previewRole.locations[0] : "", open_to_relocate: false }));
+                                setCandidate(v => ({ ...v, comfortable_locations: [] }));
                                 setAnswers({});
                                 setTouched({});
                                 invalidate();
@@ -1054,7 +1123,7 @@ export default function HiringApplication() {
                               onClick={() => {
                                 setSelected(role.id);
                                 setViewStage("detail");
-                                setCandidate(v => ({ ...v, location: role.locations.length === 1 ? role.locations[0] : "", open_to_relocate: false }));
+                                setCandidate(v => ({ ...v, comfortable_locations: [] }));
                                 setAnswers({});
                                 setTouched({});
                                 invalidate();
@@ -1288,6 +1357,12 @@ export default function HiringApplication() {
                   </button>
                   <p className="hiring-eyebrow">YOUR NEXT OPPORTUNITY</p>
                   <h2>{c.role}</h2>
+                  {/* The job's own location(s) -- informational text pulled
+                      straight from this campaign's own configured locations
+                      (never a hardcoded/global list). */}
+                  <p className="job-location-static">
+                    This role is currently open in: <strong>{jobLocationText}</strong>
+                  </p>
                 </div>
                 <span className="hiring-tag">Solar & renewable energy</span>
               </div>
@@ -1295,94 +1370,121 @@ export default function HiringApplication() {
               <form ref={form} onSubmit={e => { e.preventDefault(); void submit(); }}>
                 <fieldset disabled={busy}>
                   <div className="hiring-fields">
-                    {/* Location: State -> District, or "open to relocate anywhere".
-                        A plain div, not a <label> -- this wraps a composite group
-                        (checkbox OR a pair of selects), not one single control, and
-                        a <label> nested inside another <label> (the checkbox's own
-                        one below) is invalid HTML with unreliable click/focus
-                        behavior. .field-group in hiring.css matches this div to the
-                        same grid-cell layout .hiring-fields label gets. */}
-                    <div className="field-group">
-                      Preferred location *
-                      <label className="relocate-checkbox-row">
-                        <input
-                          type="checkbox"
-                          checked={candidate.open_to_relocate}
-                          onChange={e => {
-                            const checked = e.target.checked;
-                            setCandidate({ ...candidate, open_to_relocate: checked, location: checked ? "Open to relocate" : "" });
-                            markTouched("location");
-                            invalidate();
-                          }}
-                        />
-                        I am comfortable to relocate to any location
-                      </label>
-
-                      {candidate.open_to_relocate ? (
-                        <p className="field-hint">
-                          This role is currently open in {formatStateList(Object.keys(locationsByState))} -- HR will match you to the closest fit.
-                        </p>
-                      ) : (
-                        <div className="location-select-row">
-                          <select
-                            required
-                            aria-label="State"
+                    {/* The candidate's own current city -- a free, searchable
+                        entry (any city/town/village via India Post, not
+                        limited to this role's own locations) completely
+                        separate from the job's location shown above. Label,
+                        required-ness and visibility come from this campaign's
+                        resolved field config, so HR can relabel/hide/make
+                        optional per role without a code change. */}
+                    {(() => {
+                      const f = resolvedFields.find(x => x.id === "location");
+                      if (!f || !conditionMet(f, getFieldValue)) return null;
+                      return (
+                        <label>
+                          {f.label}{f.required ? " *" : ""}
+                          <SearchableSelect
+                            options={allCities}
+                            value={candidate.location}
+                            placeholder="Search your city or town..."
+                            ariaLabel={f.label}
                             className={touched.location ? (errors.location ? "is-invalid" : "is-valid") : ""}
-                            value={selectedState}
+                            asyncSearch={searchLocations}
                             onBlur={() => markTouched("location")}
-                            onChange={e => {
-                              setSelectedState(e.target.value);
-                              setCandidate({ ...candidate, location: "" });
+                            onChange={val => {
+                              setCandidate({ ...candidate, location: val });
+                              markTouched("location");
                               invalidate();
                             }}
-                          >
-                            <option value="">Select a state</option>
-                            {Object.keys(locationsByState).sort((a, b) => a.localeCompare(b)).map(state => (
-                              <option key={state} value={state}>{state}</option>
-                            ))}
-                          </select>
+                          />
+                          {touched.location && errors.location && (
+                            <span className="field-error-msg">{errors.location}</span>
+                          )}
+                        </label>
+                      );
+                    })()}
 
-                          {districtsInState.length > 3 ? (
-                            <SearchableSelect
-                              options={districtsInState}
-                              value={candidate.location}
-                              disabled={!selectedState}
-                              placeholder={selectedState ? "Search or select district..." : "Select a state first"}
-                              ariaLabel="District"
-                              className={touched.location ? (errors.location ? "is-invalid" : "is-valid") : ""}
-                              onBlur={() => markTouched("location")}
-                              onChange={val => {
-                                setCandidate({ ...candidate, location: val });
-                                markTouched("location");
+                    {/* Separate from the job's location entirely -- this is
+                        the candidate's own willingness to relocate, not an
+                        agreement to any specific Chirayu location. */}
+                    {(() => {
+                      const f = resolvedFields.find(x => x.id === "work_location_preference");
+                      if (!f || !conditionMet(f, getFieldValue)) return null;
+                      return (
+                        <div className="field-group">
+                          {f.label}{f.required ? " *" : ""}
+                          <label className="relocate-checkbox-row">
+                            <input
+                              type="radio"
+                              name="work_location_preference"
+                              checked={candidate.work_location_preference === "near_current"}
+                              onChange={() => {
+                                setCandidate({ ...candidate, work_location_preference: "near_current" });
+                                markTouched("work_location_preference");
                                 invalidate();
                               }}
                             />
-                          ) : (
-                            <select
-                              required
-                              aria-label="District"
-                              disabled={!selectedState}
-                              className={touched.location ? (errors.location ? "is-invalid" : "is-valid") : ""}
-                              value={candidate.location}
-                              onBlur={() => markTouched("location")}
-                              onChange={e => {
-                                setCandidate({ ...candidate, location: e.target.value });
-                                markTouched("location");
+                            I prefer to work near my current location
+                          </label>
+                          <label className="relocate-checkbox-row">
+                            <input
+                              type="radio"
+                              name="work_location_preference"
+                              checked={candidate.work_location_preference === "open_to_relocate"}
+                              onChange={() => {
+                                setCandidate({ ...candidate, work_location_preference: "open_to_relocate" });
+                                markTouched("work_location_preference");
                                 invalidate();
                               }}
-                            >
-                              <option value="">{selectedState ? "Select a district" : "Select a state first"}</option>
-                              {districtsInState.map(l => (
-                                <option key={l} value={l}>{l}</option>
-                              ))}
-                            </select>
+                            />
+                            I&apos;m open to relocating for this role
+                          </label>
+                          {touched.work_location_preference && errors.work_location_preference && (
+                            <span className="field-error-msg">{errors.work_location_preference}</span>
                           )}
                         </div>
-                      )}
-                      {touched.location && errors.location && (
-                        <span className="field-error-msg">{errors.location}</span>
-                      )}
-                    </div>
+                      );
+                    })()}
+
+                    {/* Only for a role open in more than one place -- which of
+                        the job's OWN locations the candidate would accept.
+                        Never shown for a single-location role, since there's
+                        nothing to choose there -- and, same as the two
+                        fields above, only when its own resolved condition
+                        (if any) is met. */}
+                    {c.locations.length > 1 && (() => {
+                      const f = resolvedFields.find(x => x.id === "comfortable_locations");
+                      return f && conditionMet(f, getFieldValue);
+                    })() && (
+                      <div className="field-group">
+                        {resolvedFields.find(x => x.id === "comfortable_locations")?.label || "I am comfortable working at"} *
+                        {c.locations.map(loc => {
+                          const checked = candidate.comfortable_locations.includes(loc);
+                          return (
+                            <label key={loc} className="relocate-checkbox-row">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => {
+                                  setCandidate({
+                                    ...candidate,
+                                    comfortable_locations: checked
+                                      ? candidate.comfortable_locations.filter(l => l !== loc)
+                                      : [...candidate.comfortable_locations, loc],
+                                  });
+                                  markTouched("comfortable_locations");
+                                  invalidate();
+                                }}
+                              />
+                              {loc}, {stateForLocation(loc)}
+                            </label>
+                          );
+                        })}
+                        {touched.comfortable_locations && errors.comfortable_locations && (
+                          <span className="field-error-msg">{errors.comfortable_locations}</span>
+                        )}
+                      </div>
+                    )}
 
                     {/* Full Name */}
                     <label>
@@ -1484,8 +1586,14 @@ export default function HiringApplication() {
                       )}
                     </label>
 
-                    {/* Dynamic Campaign Custom Fields */}
-                    {c.fields.map(f => {
+                    {/* Dynamic Campaign Custom Fields -- HR's own questions
+                        only (resolvedFields also carries the 9 core fields,
+                        already rendered above as their own dedicated
+                        widgets; a core-id override entry must not also
+                        render here as a second, generic input). Skips a
+                        field entirely when its own condition isn't met,
+                        same as every core field above. */}
+                    {resolvedFields.filter(f => !isCoreFieldId(f.id) && conditionMet(f, getFieldValue)).map(f => {
                       const isFieldTouched = !!touched[f.id];
                       const fieldError = errors[f.id];
                       const inputClass = isFieldTouched ? (fieldError ? "is-invalid" : "is-valid") : "";
@@ -1574,7 +1682,7 @@ export default function HiringApplication() {
                                     onClick={() => {
                                       setSelected(m.id);
                                       setViewStage("detail");
-                                      setCandidate(v => ({ ...v, location: m.locations.length === 1 ? m.locations[0] : "", open_to_relocate: false }));
+                                      setCandidate(v => ({ ...v, comfortable_locations: [] }));
                                       setAnswers({});
                                       setTouched({});
                                       invalidate();

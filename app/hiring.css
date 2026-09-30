@@ -249,7 +249,8 @@
   margin-top: 2px;
 }
 
-/* "Preferred location" field: relocate-anywhere checkbox + the State/District row. */
+/* "Work location preference" radios (and, historically, the relocate-anywhere
+   checkbox this replaced). */
 .relocate-checkbox-row {
   display: flex !important;
   flex-direction: row !important;
@@ -263,32 +264,38 @@
 /* !important throughout -- solar-grid.css's `.solar-hiring .hiring-fields
    input, textarea, select { width: 100% }` has the exact same specificity
    as this selector and loads after hiring.css, so on a tie it would win
-   and stretch this checkbox to fill the row (the elongated-box bug).
-   !important is the only way to make this checkbox's own sizing reliably
-   win regardless of import order or what any current/future theme layer
-   declares for generic .hiring-fields inputs. */
-.relocate-checkbox-row input[type="checkbox"] {
+   and stretch this control to fill the row (the elongated-box bug).
+   !important is the only way to make this checkbox/radio's own sizing
+   reliably win regardless of import order or what any current/future theme
+   layer declares for generic .hiring-fields inputs. */
+.relocate-checkbox-row input[type="checkbox"],
+.relocate-checkbox-row input[type="radio"] {
   width: 15px !important;
   height: 15px !important;
   min-width: 15px !important;
   padding: 0 !important;
   border: 1px solid #c9d6e2 !important;
-  border-radius: 3px !important;
   background: white !important;
   accent-color: #1686ce;
   flex-shrink: 0;
 }
 
-.location-select-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+.relocate-checkbox-row input[type="checkbox"] {
+  border-radius: 3px !important;
 }
 
-.location-select-row select:disabled {
-  background: #f3f5f9;
-  color: #97a3b5;
-  cursor: not-allowed;
+.relocate-checkbox-row input[type="radio"] {
+  border-radius: 50% !important;
+}
+
+/* The job's own location line under the role title -- plain informational
+   text (see jobLocationText in page.tsx), never a candidate control.
+   Deliberately NOT .field-hint's muted gray -- this is a fact about the
+   role, not a hint about a form field, so it reads at normal body contrast. */
+.job-location-static {
+  margin-top: 6px;
+  font-size: 14px;
+  color: #3a4a5c;
 }
 
 .hiring-consent {
