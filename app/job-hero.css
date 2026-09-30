@@ -11,7 +11,7 @@
   position: relative;
   max-width: 1400px;
   margin: 0 auto;
-  padding: 56px 150px 72px;
+  padding: 48px clamp(32px, 7vw, 100px) 56px;
   border-radius: 20px;
   /* Symmetric mint-to-gold-to-mint sweep: both ends match, since the blue
      hex decorations sit in the top-left and bottom-right corners and need
@@ -54,7 +54,7 @@
   z-index: 1;
   display: flex;
   align-items: center;
-  gap: 0px;
+  gap: 24px;
   max-width: 1280px;
   margin: 0 auto;
 }
@@ -73,7 +73,7 @@
 
 .job-hero-image img {
   width: 100%;
-  max-width: 300px;
+  max-width: 360px;
   height: auto;
   transform: scaleX(-1);
   filter: drop-shadow(0 20px 30px rgba(3, 25, 48, 0.35));
@@ -246,38 +246,61 @@
 }
 
 @media (max-width: 900px) {
-
-  /* .job-hero's 150px horizontal padding is sized for desktop's two-column
-     grid; left unadjusted here it eats almost all the width on a phone,
-     squeezing the heading/search bar into a sliver (real bug, not just a
-     screenshot artifact -- confirmed via horizontal scroll on the live
-     site). */
   .job-hero {
-    padding: 24px 32px 28px;
+    padding: 28px 24px;
   }
 
+  /* Pair the illustration with the heading; keep search full-width below. */
   .job-hero-grid {
-    flex-direction: column-reverse;
-    text-align: center;
-    gap: 4px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 36%);
+    grid-template-areas: "heading image" "count image" "search search";
+    gap: 16px;
+    text-align: left;
   }
 
-  .job-hero-text,
+  .job-hero-text {
+    display: contents;
+  }
+
+  .job-hero h1 {
+    grid-area: heading;
+    align-self: end;
+    margin-bottom: 0;
+  }
+
   .job-hero-image {
-    flex: none;
-    width: 100%;
+    grid-area: image;
   }
 
   .job-hero-image img {
-    max-width: 140px;
+    max-width: 320px;
   }
 
   .job-hero-text>p {
-    margin-bottom: 18px;
+    grid-area: count;
+    align-self: start;
+    margin-bottom: 0;
   }
 
   .job-hero-search {
-    margin: 0 auto;
+    grid-area: search;
+    width: 100%;
+    max-width: none;
+    flex-wrap: wrap;
+  }
+
+  .job-hero-divider {
+    display: none;
+  }
+
+  .job-hero-field,
+  .job-hero-search-btn {
+    flex: 1 1 100%;
+  }
+
+  .job-hero-search-btn {
+    margin-top: 4px;
   }
 
   .job-hero-hex-corner {
@@ -293,35 +316,53 @@
 
 @media (max-width: 700px) {
   .job-hero {
-    padding: 18px 16px 20px;
+    padding: 24px 16px;
     border-radius: 16px;
   }
 
-  .job-hero-image img {
-    max-width: 110px;
+  .job-hero-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 40%);
+    gap: 16px 8px;
+  }
+
+  .job-hero h1 {
+    font-size: clamp(22px, 4vw, 28px);
+    line-height: 1.3;
   }
 
   .job-hero-text>p {
-    margin-bottom: 14px;
+    font-size: 13px;
+    margin-bottom: 0;
   }
 
   .job-hero-search {
-    flex-wrap: wrap;
-    border-radius: 20px;
-  }
-
-  .job-hero-divider {
-    display: none;
+    padding: 4px;
+    border-radius: 16px;
   }
 
   .job-hero-field {
-    flex: 1 1 100%;
+    min-height: 44px;
+    padding: 6px;
+    gap: 6px;
+  }
+
+  .job-hero-field>svg {
+    display: none;
+  }
+
+  .job-hero-field input,
+  .job-hero-field .job-hero-city-select {
+    font-size: 16px;
   }
 
   .job-hero-search-btn {
-    flex: 1 1 100%;
-    border-radius: 14px;
-    margin-top: 4px;
+    min-height: 44px;
+    padding: 10px;
+    border-radius: 12px;
+  }
+
+  .job-hero-image img {
+    filter: drop-shadow(0 12px 16px rgba(3, 25, 48, 0.25));
   }
 }
 
@@ -457,7 +498,7 @@
 
 .role-tiles-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 155px), 1fr));
   grid-auto-rows: min-content;
   /* "dense" lets the smaller 1x1 role-tile cards backfill any grid cells
      the preview panel's span doesn't use, in source order, instead of
@@ -476,7 +517,7 @@
   grid-column: span 2;
   grid-row: span 2;
   min-width: 0;
-  display: flex;
+  display: none;
   flex-direction: column;
   gap: 10px;
   background: #f8faff;
@@ -648,6 +689,9 @@
   overflow: hidden;
   display: block;
   width: 100%;
+  min-width: 0;
+  text-decoration: none;
+  overflow-wrap: anywhere;
   /* Grid items stretch to the row's tallest item by default, but only the
      button itself -- .role-tile-card (its child) needs its own height:100%
      below to actually fill that stretched box, otherwise a short card's
@@ -820,7 +864,7 @@
   }
 
   .role-tiles-grid {
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 130px), 1fr));
     gap: 10px;
   }
 
@@ -1035,3 +1079,56 @@
     margin-bottom: 0;
   }
 }
+
+/* Preview is an enhancement for large screens with a precise hover pointer.
+   It occupies no grid cells on phones, tablets or other touch-first devices. */
+@media (min-width: 1100px) and (hover: hover) and (pointer: fine) {
+  .dept-role-preview { display: flex; }
+}
+.role-tile:focus-visible, .dept-directory-item a:focus-visible,
+.dept-role-preview-link:focus-visible {
+  outline: 3px solid #07549b;
+  outline-offset: 3px;
+}
+.dept-directory-item a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.hiring-page.solar-hiring { min-width: 0; width: 100%; box-sizing: border-box; }
+.role-tiles-panel, .dept-group, .role-tiles-grid { min-width: 0; }
+.hiring-page .hiring-steps button { min-height: 44px; }
+@media (hover: none), (pointer: coarse) {
+  .role-tile:hover:not(:disabled) { transform: none; }
+  .role-tile:hover:not(:disabled) .role-tile-card { filter: none; }
+}
+@media (max-width: 700px) {
+  .hiring-page.solar-hiring .hiring-steps button { font-size: 11px; line-height: 1.4; }
+  .job-alerts-image { width: min(100%, 280px); align-self: center; }
+  .job-alerts-image img { min-width: 0; max-width: 100%; }
+  .hiring-page.solar-hiring .hiring-fields input,
+  .hiring-page.solar-hiring .hiring-fields textarea,
+  .hiring-page.solar-hiring .hiring-fields select { font-size: 16px; }
+  .dept-directory-list { overflow-wrap: anywhere; }
+}
+
+.career-role-summary { max-width: 75ch; margin: 20px 0; line-height: 1.6; }
+.career-role-summary h1 { font-size: 24px; font-weight: 650; color: #18314a; }
+.career-role-summary p { margin: 10px 0; }
+.career-role-summary a { color: #07549b; text-decoration: underline; text-underline-offset: 3px; }
+
+/* Email signup and social links in the existing careers CTA. */
+.job-alerts-socials { margin-top: 24px; }
+.job-alerts-socials p { font-size: 13px; margin-bottom: 8px; }
+.job-alerts-socials ul { display: flex; flex-wrap: wrap; gap: 8px 16px; list-style: none; padding: 0; margin: 0; }
+.job-alerts-socials a { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; font-size: 13px; color: #07549b; text-decoration: underline; text-underline-offset: 3px; }
+.job-alerts-socials svg { flex-shrink: 0; width: 16px; height: 16px; }
+.job-alerts-socials a:focus-visible, .job-alerts-btn:focus-visible { outline: 2px solid #07549b; outline-offset: 3px; }
+.job-alerts-signup { margin-top: 20px; max-width: 480px; }
+.job-alerts-signup fieldset { min-width: 0; display: grid; gap: 10px; border: 0; padding: 0; }
+.job-alerts-signup legend { font-weight: 600; margin-bottom: 14px; }
+.job-alerts-signup label { font-size: 14px; font-weight: 500; }
+.job-alerts-signup input:not([type="checkbox"]) { width: 100%; min-width: 0; min-height: 44px; border: 1px solid #9baec3; padding: 10px; border-radius: 4px; font-size: 16px; }
+.job-alerts-signup input:focus-visible { outline: 2px solid #07549b; outline-offset: 2px; }
+.job-alerts-signup .job-alerts-hint { font-size: 12px; margin: 0 0 6px; }
+.job-alerts-signup .job-alerts-consent { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; font-weight: 400; line-height: 1.5; min-height: 44px; }
+.job-alerts-consent input { flex-shrink: 0; width: 18px; height: 18px; margin-top: 2px; }
+.job-alerts-signup .job-alerts-error { color: #a32222; font-size: 14px; }
+.job-alerts-signup button { justify-self: start; }
+.job-alerts-signup fieldset:disabled { opacity: .7; }

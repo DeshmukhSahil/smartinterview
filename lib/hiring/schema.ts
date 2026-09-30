@@ -26,6 +26,8 @@ export const fieldSchema = z.object({
   condition: z.object({ fieldId: z.string(), value: z.string() }).nullable().default(null),
 }).refine(f => (f.type !== "select" && f.type !== "radio") || f.options.length > 0, "Select/radio fields need options");
 export const campaignSchema = z.object({
+  // Optional for historical application snapshots and older API clients.
+  department_id: z.string().uuid().optional(),
   id: z.string().uuid().optional(),
   role: z.string().trim().min(2).max(150),
   interview_mode: z.enum(["ai_assisted", "one_on_one"]).default("ai_assisted"),

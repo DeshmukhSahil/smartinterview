@@ -1,13 +1,6 @@
-// Department taxonomy sourced from "Final Designations at Chirayu Power.docx"
-// (the company's internal role-hierarchy reference). Campaigns are created
-// with free-text role titles by HR, so there's no reliable foreign key to a
-// department -- this classifies a campaign's `role` string into one of the
-// company's real departments by keyword match against that reference.
-//
-// Order matters: entries are checked top-to-bottom and the first match wins,
-// so more specific/ambiguous department pairs (e.g. "Graphic Designer" under
-// Marketing vs. "Design Engineer" under Designing) are ordered with the
-// narrower or more distinguishing pattern first.
+// Legacy source for the 20260930120000 department seed and historical role seeding.
+// The careers renderer reads hiring_departments + campaign.department_id instead.
+// Do not add future departments here: create them from ERP Job Campaigns.
 export const DEPARTMENT_ORDER = [
   "Finance",
   "Marketing",

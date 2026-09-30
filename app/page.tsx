@@ -1,4 +1,5 @@
 "use client";
+import JobAlertsSignup from "@/components/JobAlertsSignup";
 import { useEffect, useRef, useState, useMemo } from "react";
 import {
   Search,
@@ -17,15 +18,12 @@ import {
   Landmark,
   ArrowLeft,
   Building2,
-  Clock3,
-  Wallet,
   Building,
   Factory,
   Warehouse,
   Castle,
   ChevronLeft,
   ChevronRight,
-  Bell,
   Megaphone,
   PencilRuler,
   Settings,
@@ -36,10 +34,12 @@ import {
   ShieldCheck,
   Sun,
 } from "lucide-react";
-import type { Campaign, Field } from "@/lib/hiring/schema";
+import type { Campaign } from "@/lib/hiring/schema";
 import { normalizeCoreFields, conditionMet, isCoreFieldId } from "@/lib/hiring/schema";
-import { departmentForRole, DEPARTMENT_ORDER, DEPARTMENT_ROLES, matchCanonicalRole, type Department } from "@/lib/hiring/departments";
+import type { HiringDepartment } from "@/lib/hiring/hiringDepartments";
 import { stateForLocation } from "@/lib/hiring/locations";
+import { careerSlug, departmentPath, rolePath, jobPath, searchPath } from "@/lib/hiring/routes";
+import { useCareersRoute } from "@/lib/hiring/useCareersRoute";
 import Navbar from "@/components/Navbar";
 import "./hiring.css";
 import { solarFonts } from "./SolarIntro";
@@ -52,6 +52,7 @@ const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 type PublicCampaign = Pick<
   Campaign,
+  | "department_id"
   | "role"
   | "locations"
   | "description"
@@ -91,7 +92,7 @@ function roleIcon(role: string) {
 // One distinct icon per real department, for the top-level department
 // picker -- roleIcon()'s keyword match is too generic for department names
 // themselves (most would just fall back to the plain briefcase).
-const DEPARTMENT_ICONS: Record<Department | "Other", typeof Briefcase> = {
+const DEPARTMENT_ICONS: Record<string, typeof Briefcase> = {
   Finance: Calculator,
   Marketing: Megaphone,
   Sales: TrendingUp,
@@ -118,14 +119,6 @@ function cityIcon(city: string) {
   return CITY_ICONS[hash % CITY_ICONS.length];
 }
 
-// Static half of the role-search autocomplete's suggestion pool (the
-// document's role titles + department names never change at runtime);
-// live campaign titles are merged in per-render in the component, since
-// those change as campaigns are fetched.
-const CANONICAL_ROLE_TITLES: string[] = [
-  ...DEPARTMENT_ORDER,
-  ...Object.values(DEPARTMENT_ROLES).flatMap(roles => roles.map(r => r.title)),
-];
 const GENERAL_APPLICATION_JOB_CODE = "GENERAL";
 
 interface SearchableSelectProps {
@@ -374,31 +367,35 @@ function SearchableSelect({
 }
 
 export default function HiringApplication() {
+  const [departments, setDepartments] = useState<HiringDepartment[]>([]);
+  const referenceRoles = useMemo(() => departments.flatMap(d => d.reference_roles), [departments]);
   const [campaigns, setCampaigns] = useState<PublicCampaign[]>([]);
   // Applied filters -- what actually narrows the role grid below. Kept
   // separate from the hero search bar's own draft state (roleQueryDraft /
   // cityFilterDraft) so typing a role and picking a city doesn't filter
   // anything until the candidate hits SEARCH, applying both together.
-  const [roleQuery, setRoleQuery] = useState("");
-  const [cityFilter, setCityFilter] = useState("");
+  const { route, navigate } = useCareersRoute();
+  const roleQuery = route?.query ?? "";
+  const cityFilter = route?.city ?? "";
   const [roleQueryDraft, setRoleQueryDraft] = useState("");
   const [cityFilterDraft, setCityFilterDraft] = useState("");
-  // Top-level department picker: null shows a grid of all 14 departments;
+  // Top-level department picker: null shows a grid of configured departments;
   // picking one narrows the page down to just that department's roles.
   // Running a text/city search (runSearch) drops back out of this view.
-  const [selectedDepartment, setSelectedDepartment] = useState<Department | "Other" | null>(null);
+  const selectedDepartment = route?.department ?? null;
   // Autocomplete dropdown under the role-search input -- open state is
   // separate from whether there's anything to show so Escape/click-outside
   // can close it without fighting a query that still has matches.
   const [roleSuggestOpen, setRoleSuggestOpen] = useState(false);
   const roleFieldRef = useRef<HTMLDivElement>(null);
-  const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState("");
+  const [fetching, setLoading] = useState(true);
+  const loading = fetching || !route;
+  const selected = route?.jobId ?? "";
   // Which open-role card's description shows in the preview panel beside a
   // department's tiles -- hovering/focusing a card updates it; defaults to
   // the first open role in that department when nothing's been hovered yet.
   const [previewRoleId, setPreviewRoleId] = useState("");
-  const [viewStage, setViewStage] = useState<"detail" | "form">("detail");
+
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [candidate, setCandidate] = useState({ name: "", email: "", phone: "", location: "", years: "", consent: false, work_location_preference: "" as "" | "near_current" | "open_to_relocate", comfortable_locations: [] as string[] });
@@ -413,6 +410,37 @@ export default function HiringApplication() {
   const [canScrollCitiesRight, setCanScrollCitiesRight] = useState(false);
 
   const c = campaigns.find(c => c.id === selected);
+  const viewStage = route?.stage === "form" && c?.is_open ? "form" : "detail";
+  const roleTitle = useMemo(() => route?.kind === "role"
+    ? [...referenceRoles.map(role => role.title), ...campaigns.map(item => item.role)]
+      .find(title => careerSlug(title) === route.role) || ""
+    : "", [route?.kind, route?.role, campaigns, referenceRoles]);
+  const routeUnavailable = !loading && !error && (route?.kind === "invalid" || (route?.kind === "department" && !departments.some(d => d.slug === route.department)) || (route?.kind === "job" && !c) || (route?.kind === "role" && !roleTitle));
+  function setViewStage(stage: "detail" | "form") { if (c) navigate(jobPath(c.id, stage === "form")); }
+  function setSelected(id: string) { navigate(id ? jobPath(id) : "/"); }
+  function followLink(event: React.MouseEvent<HTMLAnchorElement>, href: string, action?: () => void) {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    if (busy) return;
+    navigate(href);
+    action?.();
+  }
+  useEffect(() => {
+    setRoleQueryDraft(route?.query ?? "");
+    setCityFilterDraft(route?.city ?? "");
+  }, [route?.query, route?.city]);
+  const lastJob = useRef("");
+  useEffect(() => {
+    if (!selected) { setReceipt(null); return; }
+    if (lastJob.current === selected) return;
+    lastJob.current = selected;
+    setCandidate(value => ({ ...value, comfortable_locations: [] }));
+    setTouched({});
+    setHasResume(false);
+    setReceipt(null);
+    // Direct navigation/back to another job must not reuse its custom answers.
+    setAnswers((previous): Record<string, string> => c?.job_code === GENERAL_APPLICATION_JOB_CODE ? { desired_role: previous.desired_role || "" } : {});
+  }, [selected, c?.job_code]);
   // The campaign's own `fields` array is the literal source of truth for
   // what appears on its apply form -- a field renders only if it's actually
   // present here (see migrations/20260930_seed_core_hiring_fields.sql for
@@ -445,12 +473,12 @@ export default function HiringApplication() {
   const roleSuggestionPool = useMemo(() => {
     const seen = new Set<string>();
     const pool: string[] = [];
-    for (const title of [...CANONICAL_ROLE_TITLES, ...campaigns.map(role => role.role)]) {
+    for (const title of [...departments.map(d => d.name), ...referenceRoles.map(r => r.title), ...campaigns.map(role => role.role)]) {
       const key = title.toLowerCase();
       if (!seen.has(key)) { seen.add(key); pool.push(title); }
     }
     return pool;
-  }, [campaigns]);
+  }, [campaigns, departments, referenceRoles]);
   function matchRoleSuggestions(query: string, limit = 8): string[] {
     const q = query.trim().toLowerCase();
     if (q.length < 2) return [];
@@ -490,9 +518,7 @@ export default function HiringApplication() {
   // an autocomplete suggestion (using that suggestion directly, so it
   // doesn't wait on the draft state update landing first).
   function applySearch(role: string, city: string) {
-    setRoleQuery(role);
-    setCityFilter(city);
-    setSelectedDepartment(null);
+    navigate(searchPath(role, city));
     document.getElementById("role-tiles")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
   function runSearch() {
@@ -506,8 +532,7 @@ export default function HiringApplication() {
   // already has a real, specific campaign to apply through instead.
   function openGeneralApplication(desiredRole: string) {
     if (!generalApplicationCampaign) return;
-    setSelected(generalApplicationCampaign.id);
-    setViewStage("form");
+    navigate(jobPath(generalApplicationCampaign.id, true));
     // Not touching candidate.location/work_location_preference here -- those
     // describe the candidate, not the job, so switching roles must not reset
     // or auto-fill them from the newly selected campaign's own locations.
@@ -558,52 +583,33 @@ export default function HiringApplication() {
           !q ||
           role.role.toLowerCase().includes(q) ||
           role.locations.some(l => l.toLowerCase().includes(q)) ||
-          departmentForRole(role.role).toLowerCase().includes(q);
+          (departments.find(d => d.id === role.department_id)?.name || "").toLowerCase().includes(q);
         const matchesCity = !cityFilterHasRoles || !cityFilter || role.locations.includes(cityFilter);
-        return matchesQuery && matchesCity;
+        return matchesQuery && matchesCity && (!route?.role || careerSlug(role.role) === route.role);
       })
       // Open roles first, closed roles last; alphabetical order (already the
       // fetch order) is preserved within each group since sort is stable.
       .sort((a, b) => Number(b.is_open) - Number(a.is_open));
-  }, [campaigns, roleQuery, cityFilter, cityFilterHasRoles]);
-  // Departments as the first layer, roles nested beneath -- ordered by the
-  // company's real department list, with any unrecognized role titles
-  // grouped under a trailing "Other" bucket instead of being dropped.
-  //
-  // Each department also carries the full reference role list from the
-  // company's designation document (independent of whether any of those
-  // exact titles currently have a live campaign -- HR's free-text campaign
-  // titles don't reliably match the document's phrasing, so these are shown
-  // as a separate "full structure" reference rather than merged 1:1 with the
-  // open-role tiles above them). Hidden when a city filter is active since
-  // the reference roles have no location data to filter by.
+  }, [campaigns, departments, roleQuery, cityFilter, cityFilterHasRoles, route?.role]);
+  // Explicit campaign assignments and database metadata determine every group.
   const groupedByDepartment = useMemo(() => {
     const q = roleQuery.trim().toLowerCase();
-    const openByDept = new Map<string, PublicCampaign[]>();
-    for (const role of visibleCampaigns) {
-      const dept = departmentForRole(role.role);
-      if (!openByDept.has(dept)) openByDept.set(dept, []);
-      openByDept.get(dept)!.push(role);
-    }
-    const order: (Department | "Other")[] = [...DEPARTMENT_ORDER, "Other"];
-    return order
-      .map(dept => {
-        const openRoles = openByDept.get(dept) || [];
-        const canonical = dept === "Other" ? [] : DEPARTMENT_ROLES[dept as Department];
-        const directoryRoles = cityFilter && cityFilterHasRoles
-          ? []
-          : canonical.filter(r => !q || r.title.toLowerCase().includes(q) || dept.toLowerCase().includes(q));
-        return { department: dept, openRoles, directoryRoles };
-      })
-      .filter(g => g.openRoles.length > 0 || g.directoryRoles.length > 0);
-  }, [visibleCampaigns, roleQuery, cityFilter, cityFilterHasRoles]);
+    return departments.map(department => {
+      const openRoles = visibleCampaigns.filter(role => role.department_id === department.id);
+      const directoryRoles = cityFilter && cityFilterHasRoles ? [] : department.reference_roles.filter(r =>
+        (!route?.role || careerSlug(r.title) === route.role) &&
+        (!q || r.title.toLowerCase().includes(q) || department.name.toLowerCase().includes(q)));
+      return { department, openRoles, directoryRoles };
+    }).filter(g => g.openRoles.length || g.directoryRoles.length ||
+      (!route?.role && !cityFilter && (!q || g.department.name.toLowerCase().includes(q))));
+  }, [departments, visibleCampaigns, roleQuery, cityFilter, cityFilterHasRoles, route?.role]);
   // No active search and no department picked yet -- the top-level
   // department picker grid, not the role listing, is what's shown.
-  const isBrowsingAllDepartments = !selectedDepartment && !roleQuery && !cityFilter;
+  const isBrowsingAllDepartments = !selectedDepartment && !roleQuery && !cityFilter && !route?.role;
   const departmentsToRender = selectedDepartment
-    ? groupedByDepartment.filter(g => g.department === selectedDepartment)
+    ? groupedByDepartment.filter(g => g.department.slug === selectedDepartment)
     : groupedByDepartment;
-  const totalActiveJobs = campaigns.length;
+  const totalActiveJobs = campaigns.filter(role => role.is_open).length;
   const yearsLabel = (role: Pick<PublicCampaign, "min_years" | "max_years">) =>
     `${role.min_years}${role.max_years !== null ? ` - ${role.max_years}` : "+"} years`;
   const locationLabel = (role: Pick<PublicCampaign, "locations">) =>
@@ -617,6 +623,7 @@ export default function HiringApplication() {
     fetch(`${BASE_PATH}/api/hiring`, { cache: "no-store" }).then(async r => {
       const body = await r.json(); if (!r.ok) throw new Error(body.error);
       setCampaigns(body.campaigns);
+      setDepartments(body.departments || []);
     }).catch(e => setError(e.message)).finally(() => setLoading(false));
   }, []);
 
@@ -856,17 +863,16 @@ export default function HiringApplication() {
           <span className="hiring-eyebrow">APPLICATION RECEIVED</span>
           <h2>Thank you, {candidate.name}.</h2>
           <p>
-            {receipt.email_status === "sent"
-              ? `Your interview login details have been emailed to ${candidate.email}. Please check your inbox and spam folder.`
-              : "Your application is saved. Your access email is awaiting delivery; HR can see and retry it. You do not need to apply again."}
+            {`We've received your application. A confirmation email will be sent to ${candidate.email} shortly — please check your inbox and spam folder. You do not need to apply again.`}
           </p>
-          <p>Reference: {receipt.reference}</p>
+          {/* Same short form as {application_reference} in the ERP's thank-you email. */}
+          <p>Reference: {String(receipt.reference).slice(0, 8).toUpperCase()}</p>
           <p>HR will review your experience. Interview access does not confirm selection.</p>
-          <a href="/login">Go to interview login →</a>
+          <a href={`${BASE_PATH}/login`}>Go to interview login →</a>
         </section>
       ) : (
         <>
-          {!c && (
+          {route && !c && !routeUnavailable && route.kind !== "job" && (
             <section className="job-hero" id="opportunities">
               <img
                 src={`${BASE_PATH}/brand/hero-hex-corner.png`}
@@ -900,7 +906,7 @@ export default function HiringApplication() {
                           if (e.key === "Enter") { setRoleSuggestOpen(false); runSearch(); }
                           else if (e.key === "Escape") setRoleSuggestOpen(false);
                         }}
-                        placeholder="Search Job Title, Role"
+                        placeholder="Job title or role"
                         aria-label="Search job title or role"
                         role="combobox"
                         aria-expanded={roleSuggestOpen && roleSuggestions.length > 0}
@@ -976,7 +982,7 @@ export default function HiringApplication() {
             <button
               type="button"
               className={c && viewStage === "form" ? "current" : ""}
-              disabled={!c}
+              disabled={!c || !c.is_open}
               onClick={() => setViewStage("form")}
             >
               03 · Your application
@@ -984,6 +990,7 @@ export default function HiringApplication() {
           </nav>
 
           {loading && <p role="status">Loading opportunities…</p>}
+          {routeUnavailable && <section className="no-results-panel" role="status"><h1>This opportunity is unavailable</h1><p>The link may be incorrect, or the job may no longer be published.</p><a href={`${BASE_PATH}/`} onClick={event => followLink(event, "/")}>Browse all departments and jobs</a></section>}
 
           {!c && !loading && cityFilter && !cityFilterHasRoles && (
             <p className="city-no-roles-banner" role="status">
@@ -992,35 +999,43 @@ export default function HiringApplication() {
             </p>
           )}
 
-          {!c && !loading && (
+          {!c && !loading && !routeUnavailable && (
             <section className="role-tiles-panel" id="role-tiles">
               <div className="role-tiles-tabs">
-                <span className="current">Departments &amp; Roles</span>
+                <span className="current">{roleTitle || "Departments & Roles"}</span>
               </div>
+
+              {roleTitle && <div className="career-role-summary">
+                <h1>{roleTitle}</h1>
+                {referenceRoles.filter(role => careerSlug(role.title) === route?.role).slice(0, 1).map(role => (
+                  <div key={role.title}><p>{role.task}</p><p>{role.duration}</p></div>
+                ))}
+                {!visibleCampaigns.length && <p>No published jobs for this role right now. Browse the department for other opportunities.</p>}
+                {groupedByDepartment.map(({ department }) => <a key={department.id} href={`${BASE_PATH}${departmentPath(department.slug)}`} onClick={event => followLink(event, departmentPath(department.slug))}>View all roles in {department.name}</a>)}
+              </div>}
 
               {isBrowsingAllDepartments ? (
                 <div className="role-tiles-grid">
                   {groupedByDepartment.map(({ department, openRoles }) => {
-                    const Icon = DEPARTMENT_ICONS[department];
-                    const total = department === "Other" ? openRoles.length : DEPARTMENT_ROLES[department].length;
+                    const Icon = DEPARTMENT_ICONS[department.icon_key || ""] || Briefcase;
+                    const total = new Set([...department.reference_roles.map(r => r.title), ...openRoles.map(r => r.role)]).size;
                     return (
-                      <button
-                        type="button"
-                        key={department}
+                      <a
+                        href={`${BASE_PATH}${departmentPath(department.slug)}`}
+                        key={department.id}
                         className="role-tile role-tile-plain"
-                        onClick={() => {
-                          setSelectedDepartment(department);
+                        onClick={event => followLink(event, departmentPath(department.slug), () => {
                           document.getElementById("role-tiles")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                        }}
+                        })}
                       >
                         <span className="role-tile-card">
                           <span className="role-tile-icon"><Icon size={26} /></span>
-                          <strong>{department}</strong>
+                          <strong>{department.name}</strong>
                           <span className="role-tile-count">
-                            {total} {total === 1 ? "role" : "roles"}{openRoles.length > 0 ? ` · ${openRoles.length} open` : ""}
+                            {total} {total === 1 ? "role" : "roles"}{openRoles.length > 0 ? ` · ${openRoles.filter(role => role.is_open).length} open` : ""}
                           </span>
                         </span>
-                      </button>
+                      </a>
                     );
                   })}
                 </div>
@@ -1030,7 +1045,7 @@ export default function HiringApplication() {
                     <button
                       type="button"
                       className="dept-back-btn"
-                      onClick={() => setSelectedDepartment(null)}
+                      onClick={() => navigate("/")}
                     >
                       <ArrowLeft size={15} aria-hidden="true" /> All departments
                     </button>
@@ -1057,17 +1072,18 @@ export default function HiringApplication() {
                   )}
 
                   {departmentsToRender.map(({ department, openRoles, directoryRoles }) => (
-                <div className="dept-group" key={department}>
+                <div className="dept-group" key={department.id}>
                   <h2 className="dept-group-title">
-                    {department}
+                    {department.name}
                     {openRoles.length > 0 && (
-                      <span className="dept-group-count">{openRoles.length} open</span>
+                      <span className="dept-group-count">{openRoles.filter(role => role.is_open).length} open</span>
                     )}
                   </h2>
 
+                  {!openRoles.length && <p role="status">No published jobs in this department right now.</p>}
                   {openRoles.length > 0 && (() => {
                     const previewRole = openRoles.find(r => r.id === previewRoleId) || openRoles[0];
-                    const canonicalMatch = previewRole ? matchCanonicalRole(department, previewRole.role) : null;
+                    const canonicalMatch = previewRole ? department.reference_roles.find(r => careerSlug(r.title) === careerSlug(previewRole.role)) : null;
                     return (
                       <div className="role-tiles-grid">
                         {previewRole && (
@@ -1093,41 +1109,26 @@ export default function HiringApplication() {
                                 )}
                               </>
                             )}
-                            <button
-                              type="button"
+                            <a
+                              href={`${BASE_PATH}${jobPath(previewRole.id)}`}
                               className="dept-role-preview-link"
-                              onClick={() => {
-                                setSelected(previewRole.id);
-                                setViewStage("detail");
-                                setCandidate(v => ({ ...v, comfortable_locations: [] }));
-                                setAnswers({});
-                                setTouched({});
-                                invalidate();
-                              }}
+                              onClick={event => followLink(event, jobPath(previewRole.id))}
                             >
                               View full details →
-                            </button>
+                            </a>
                           </div>
                         )}
 
                         {openRoles.map(role => {
                           const Icon = roleIcon(role.role);
                           return (
-                            <button
-                              type="button"
-                              disabled={busy}
-                              aria-pressed={selected === role.id}
+                            <a
+                              href={`${BASE_PATH}${jobPath(role.id)}`}
+                              aria-disabled={busy || undefined}
                               key={role.id}
                               onMouseEnter={() => setPreviewRoleId(role.id)}
                               onFocus={() => setPreviewRoleId(role.id)}
-                              onClick={() => {
-                                setSelected(role.id);
-                                setViewStage("detail");
-                                setCandidate(v => ({ ...v, comfortable_locations: [] }));
-                                setAnswers({});
-                                setTouched({});
-                                invalidate();
-                              }}
+                              onClick={event => followLink(event, jobPath(role.id))}
                               className={`role-tile ${selected === role.id ? "selected" : ""} ${role.is_open ? "is-open" : "is-closed"}`}
                             >
                               <span className="role-tile-card">
@@ -1140,7 +1141,7 @@ export default function HiringApplication() {
                               <span className={role.is_open ? "role-tile-ribbon role-tile-ribbon-open" : "role-tile-ribbon role-tile-ribbon-closed"}>
                                 {role.is_open ? "Open" : "Closed"}
                               </span>
-                            </button>
+                            </a>
                           );
                         })}
                       </div>
@@ -1152,7 +1153,7 @@ export default function HiringApplication() {
                       <p className="dept-directory-label">Full role structure at Chirayu Power</p>
                       <ul className="dept-directory-list">
                         {directoryRoles.map(r => (
-                          <li key={r.title} className="dept-directory-item" title={`${r.task} Duration: ${r.duration}`}>{r.title}</li>
+                          <li key={r.title} className="dept-directory-item"><a href={`${BASE_PATH}${rolePath(r.title)}`} onClick={event => followLink(event, rolePath(r.title))}>{r.title}</a></li>
                         ))}
                       </ul>
                     </>
@@ -1164,7 +1165,7 @@ export default function HiringApplication() {
             </section>
           )}
 
-          {!c && !loading && allCities.length > 0 && (
+          {!c && !loading && !routeUnavailable && allCities.length > 0 && (
             <section className="city-bar-panel">
               <div className="role-tiles-tabs">
                 <span className="current">Browse roles by city</span>
@@ -1198,7 +1199,7 @@ export default function HiringApplication() {
                         aria-pressed={cityFilter === city}
                         onClick={() => {
                           const next = cityFilter === city ? "" : city;
-                          setCityFilter(next);
+                          navigate(searchPath(roleQuery, next));
                           setCityFilterDraft(next);
                           document.getElementById("role-tiles")?.scrollIntoView({ behavior: "smooth", block: "start" });
                         }}
@@ -1222,20 +1223,14 @@ export default function HiringApplication() {
             </section>
           )}
 
-          {!c && !loading && (
+          {!c && !loading && !routeUnavailable && (
             <section className="job-alerts-panel">
               <div className="job-alerts-text">
                 <h2>
                   Never miss out on the latest <span>career opportunities</span>
                 </h2>
-                <p>Get notified the moment a role that fits opens up.</p>
-                <a
-                  className="job-alerts-btn"
-                  href="mailto:hr@chirayupower.com?subject=Job%20alerts%20sign-up"
-                >
-                  <Bell size={16} aria-hidden="true" />
-                  Get Job Alerts
-                </a>
+                <p>Sign up for new job openings and choose whether to receive career newsletters.</p>
+                <JobAlertsSignup />
               </div>
               <div className="job-alerts-image">
                 <img
@@ -1367,7 +1362,7 @@ export default function HiringApplication() {
                 <span className="hiring-tag">Solar & renewable energy</span>
               </div>
 
-              <form ref={form} onSubmit={e => { e.preventDefault(); void submit(); }}>
+              <form key={c.id} ref={form} onSubmit={e => { e.preventDefault(); void submit(); }}>
                 <fieldset disabled={busy}>
                   <div className="hiring-fields">
                     {/* The candidate's own current city -- a free, searchable
@@ -1680,8 +1675,7 @@ export default function HiringApplication() {
                                     type="button"
                                     key={m.id}
                                     onClick={() => {
-                                      setSelected(m.id);
-                                      setViewStage("detail");
+                                      navigate(jobPath(m.id));
                                       setCandidate(v => ({ ...v, comfortable_locations: [] }));
                                       setAnswers({});
                                       setTouched({});

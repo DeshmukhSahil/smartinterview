@@ -1,3 +1,5 @@
+import { z } from "zod";
+import { PUBLIC_DEPARTMENT_COLUMNS } from "@/lib/hiring/hiringDepartments";
 import { campaignSchema } from "@/lib/hiring/schema";
 import { cors, erp, failure, requireHR, deliver, retakeInterview, interviewDb } from "@/lib/hiring/server";
 import { interviewLoginUrl } from "@/lib/hiring/link";
@@ -7,18 +9,27 @@ export async function GET(r: Request) {
   try {
     await requireHR(r, "view");
     const db = erp();
-    const [campaigns, applications] = await Promise.all([
+    const [campaigns, applications, departments] = await Promise.all([
       db.from("hiring_campaigns").select("*").order("updated_at", { ascending: false }),
       db.from("hiring_applications").select("id,campaign_id,candidate,screening,submitted_at,email_status,delivery_error,interview_id").not("submitted_at", "is", null).order("submitted_at", { ascending: false }).limit(100),
+      db.from("hiring_departments").select(PUBLIC_DEPARTMENT_COLUMNS).order("sort_order").order("name"),
     ]);
-    if (campaigns.error || applications.error) throw campaigns.error || applications.error;
-    return Response.json({ campaigns: campaigns.data, applications: applications.data }, { headers: { ...cors(r), "Cache-Control": "no-store" } });
+    if (campaigns.error || applications.error || departments.error) throw campaigns.error || applications.error || departments.error;
+    return Response.json({ campaigns: campaigns.data, applications: applications.data, departments: departments.data }, { headers: { ...cors(r), "Cache-Control": "no-store" } });
   } catch (e) { return failure(e, r); }
 }
 export async function POST(r: Request) {
   try {
     const body = await r.json();
-    await requireHR(r, body.resume_id || body.link_ids ? "view" : "edit");
+    await requireHR(r, body.create_department !== undefined ? "edit" : body.resume_id || body.link_ids ? "view" : "edit");
+    if (body.create_department !== undefined) {
+      const parsed = z.string().trim().min(2, "Enter at least 2 characters for the department name.").max(100).safeParse(body.create_department);
+      if (!parsed.success) return Response.json({ error: parsed.error.issues[0].message }, { status: 400, headers: cors(r) });
+      const { data, error } = await erp().from("hiring_departments").insert({ name: parsed.data }).select(PUBLIC_DEPARTMENT_COLUMNS).single();
+      if (error?.code === "23505") return Response.json({ error: "This department already exists. Select it from the list." }, { status: 409, headers: cors(r) });
+      if (error) throw error;
+      return Response.json({ department: data }, { status: 201, headers: cors(r) });
+    }
     if (body.link_ids) {
       // Candidate sign-in links (/interview/[id]/[token]) can only be minted
       // server-side -- the token is keyed with a secret the ERP never sees --
@@ -70,6 +81,11 @@ export async function POST(r: Request) {
     const parsed = campaignSchema.safeParse(body);
     if (!parsed.success) return Response.json({ error: parsed.error.issues.map(i => i.message).join("; ") }, { status: 400, headers: cors(r) });
     const { id, ...values } = parsed.data;
+    if (values.department_id) {
+      const department = await erp().from("hiring_departments").select("id").eq("id", values.department_id).maybeSingle();
+      if (department.error) throw department.error;
+      if (!department.data) return Response.json({ error: "Select an existing hiring department." }, { status: 400, headers: cors(r) });
+    }
     const query = id ? erp().from("hiring_campaigns").update({ ...values, updated_at: new Date().toISOString() }).eq("id", id) : erp().from("hiring_campaigns").insert(values);
     const { data, error } = await query.select().single();
     if (error) throw error;

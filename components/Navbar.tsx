@@ -51,7 +51,7 @@ export default function Navbar() {
         <Link href="/" className={styles.brandArea} aria-label="Chirayu Power Home">
           <div className={styles.logoWrapper}>
             <img
-              src="/assets/chirayu-icon1.png"
+              src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/assets/chirayu-icon1.png`}
               alt="Chirayu Power Logo"
               className={styles.logoImg}
             />
@@ -61,7 +61,7 @@ export default function Navbar() {
         {/* Navigation Links */}
         <div className={styles.navLinks}>
           {navItems.map(item => {
-            const isActive = !isExternal(item.href) && (pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href)));
+            const isActive = !isExternal(item.href) && (pathname === item.href || (item.href === "/" && /^\/(departments|roles|jobs)(\/|$)/.test(pathname)) || (item.href !== "/" && pathname.startsWith(item.href)));
             const className = `${styles.navLink} ${isActive ? styles.active : ""}`;
 
             return isExternal(item.href) ? (
@@ -83,6 +83,8 @@ export default function Navbar() {
             className={styles.mobileToggle}
             onClick={() => setMobileOpen(prev => !prev)}
             aria-label="Toggle navigation menu"
+            aria-expanded={mobileOpen}
+            aria-controls="careers-mobile-navigation"
           >
             {mobileOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
@@ -90,7 +92,7 @@ export default function Navbar() {
 
         {/* Mobile Menu Drawer */}
         {mobileOpen && (
-          <div className={styles.mobileMenu}>
+          <div id="careers-mobile-navigation" className={styles.mobileMenu}>
             {navItems.map(item =>
               isExternal(item.href) ? (
                 <a

@@ -7,6 +7,8 @@ const basePath = process.env.NEXT_BASE_PATH || "";
 
 const nextConfig: NextConfig = {
   basePath,
+  // Allows an isolated verification build while a local dev server is running.
+  distDir: process.env.NEXT_BUILD_DIR || ".next",
   // Mirrors basePath into the client bundle so hardcoded fetch() calls
   // (which, unlike <Link>/router, aren't auto-prefixed by basePath) can prepend it.
   env: {
@@ -19,6 +21,16 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   serverExternalPackages: ["pdf-parse", "@napi-rs/canvas"],
+  // Serve the mounted careers SPA at shareable URLs, including on refresh.
+  // Next applies the configured basePath to both sides automatically.
+  async rewrites() {
+    return [
+      { source: "/departments/:department", destination: "/" },
+      { source: "/roles/:role", destination: "/" },
+      { source: "/jobs/:jobId", destination: "/" },
+      { source: "/jobs/:jobId/apply", destination: "/" },
+    ];
+  },
   // The careers page moved from /apply to the site root, and the candidate
   // portal from the root to /portal. Old bookmarks and already-sent invitation
   // emails still point at the previous paths, so keep them working. Order

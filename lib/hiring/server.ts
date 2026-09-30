@@ -264,22 +264,18 @@ export async function deliver(id: string) {
       if (created.error) throw created.error;
       interview = created.data;
     }
-    const updated = await db.from("hiring_applications").update({ interview_id: interview!.id }).eq("id", id);
+    // The candidate's thank-you email is no longer sent from here (Resend was
+    // unreliable). email_status stays 'pending' and the ERP's
+    // hiring-screening-worker sends the HR-editable "application received"
+    // template from the HR Microsoft 365 mailbox, then marks it sent/failed.
+    // Interview-portal credentials go out later from the Candidate Pipeline
+    // (screening invitation).
+    const updated = await db.from("hiring_applications").update({ interview_id: interview!.id, lease_until: null }).eq("id", id);
     if (updated.error) throw updated.error;
-    // Beyond the provider's 24h deduplication window, uncertain delivery needs manual review.
-    if (a.email_attempted_at && Date.now() - Date.parse(a.email_attempted_at) > 23 * 3600000) throw new Error("Email delivery requires manual review after the retry window");
-    const attempted = await db.from("hiring_applications").update({ email_attempted_at: a.email_attempted_at || new Date().toISOString() }).eq("id", id);
-    if (attempted.error) throw attempted.error;
-    const loginUrl = interviewLoginUrl(interview!.id, interview!.password_id);
-    const subject = isOneOnOne ? "Chirayu Power — application received, interview scheduling" : "Chirayu Power — application received and interview access";
-    const text = isOneOnOne
-      ? `Thank you for applying to Chirayu Power.\n\nWe have received your application for ${c.role}. This role is filled through a one-on-one interview with our HR team.\n\nLog in to your candidate portal to see your interview once it has been scheduled: ${loginUrl}\nLogin email: ${a.candidate.email}\nAccess password ID: ${interview!.password_id}\n\nKeep these credentials private. Portal access does not confirm selection or an offer.\n\nChirayu Power HR Team`
-      : `Thank you for applying to Chirayu Power.\n\nWe have received your application. Our HR team will review it.\n\nInterview portal: ${loginUrl}\nLogin email: ${a.candidate.email}\nAccess password ID: ${interview!.password_id}\n\nKeep these credentials private. Interview access does not confirm selection or an offer.\n\nChirayu Power HR Team`;
-    await sendEmail({ to: [a.candidate.email], subject, text, idempotencyKey: `hiring-${id}` });
-    const saved = await db.from("hiring_applications").update({ email_status: "sent", email_sent_at: new Date().toISOString(), delivery_error: null, lease_until: null }).eq("id", id);
-    if (saved.error) throw saved.error;
   } catch (error) {
-    const saved = await db.from("hiring_applications").update({ email_status: "failed", delivery_error: error instanceof Error ? error.message : "Delivery failed", lease_until: null }).eq("id", id);
+    // Interview setup failed. Leave email_status alone so the thank-you email
+    // still goes out; the error is kept for HR (retry via the admin route).
+    const saved = await db.from("hiring_applications").update({ delivery_error: `Interview setup failed: ${error instanceof Error ? error.message : "unknown error"}`, lease_until: null }).eq("id", id);
     if (saved.error) throw saved.error;
   }
 }
