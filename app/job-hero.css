@@ -1119,6 +1119,12 @@
 .job-alerts-socials ul { display: flex; flex-wrap: wrap; gap: 8px 16px; list-style: none; padding: 0; margin: 0; }
 .job-alerts-socials a { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; font-size: 13px; color: #07549b; text-decoration: underline; text-underline-offset: 3px; }
 .job-alerts-socials svg { flex-shrink: 0; width: 16px; height: 16px; }
+.job-alerts-socials .social-brand { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 26px; height: 26px; border-radius: 5px; color: #fff; }
+.job-alerts-socials .social-brand-x { background: #000; }
+.job-alerts-socials .social-brand-facebook { background: #1877f2; }
+.job-alerts-socials .social-brand-instagram { background: radial-gradient(circle at 30% 105%, #feda75 0%, #fa7e1e 28%, #d62976 55%, #962fbf 78%, #4f5bd5 100%); }
+.job-alerts-socials .social-brand-linkedin { background: #0a66c2; }
+
 .job-alerts-socials a:focus-visible, .job-alerts-btn:focus-visible { outline: 2px solid #07549b; outline-offset: 3px; }
 .job-alerts-signup { margin-top: 20px; max-width: 480px; }
 .job-alerts-signup fieldset { min-width: 0; display: grid; gap: 10px; border: 0; padding: 0; }

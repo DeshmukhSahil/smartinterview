@@ -5,11 +5,11 @@ import { FaFacebookF, FaInstagram, FaLinkedinIn, FaXTwitter } from "react-icons/
 import { jobAlertSignupSchema } from "@/lib/hiring/jobAlerts";
 const base=process.env.NEXT_PUBLIC_BASE_PATH || "";
 const socials=[
-  {label:"X",href:"https://x.com/Chirayu_Power",Icon:FaXTwitter},
-  {label:"Facebook",href:"https://www.facebook.com/share/1CA7tkNtrM/?mibextid=wwXIfr",Icon:FaFacebookF},
-  {label:"Instagram · Chirayu Power",href:"https://www.instagram.com/chirayu_power?stkn=NW00YTg3Nmg5cXJq",Icon:FaInstagram},
-  {label:"Instagram · Eventzone",href:"https://www.instagram.com/chirayupower_eventzone?stkn=NDFrM2l3a2x3dnl1",Icon:FaInstagram},
-  {label:"LinkedIn",href:"https://www.linkedin.com/company/chirayu-power-pvt-ltd/",Icon:FaLinkedinIn},
+  {label:"X",href:"https://x.com/Chirayu_Power",Icon:FaXTwitter,brand:"x"},
+  {label:"Facebook",href:"https://www.facebook.com/share/1CA7tkNtrM/?mibextid=wwXIfr",Icon:FaFacebookF,brand:"facebook"},
+  {label:"Instagram · Chirayu Power",href:"https://www.instagram.com/chirayu_power?stkn=NW00YTg3Nmg5cXJq",Icon:FaInstagram,brand:"instagram"},
+  {label:"Instagram · Eventzone",href:"https://www.instagram.com/chirayupower_eventzone?stkn=NDFrM2l3a2x3dnl1",Icon:FaInstagram,brand:"instagram"},
+  {label:"LinkedIn",href:"https://www.linkedin.com/company/chirayu-power-pvt-ltd/",Icon:FaLinkedinIn,brand:"linkedin"},
 ];
 export default function JobAlertsSignup() {
   const id=useId();const first=useRef<HTMLInputElement>(null);const trigger=useRef<HTMLButtonElement>(null);
@@ -50,8 +50,8 @@ export default function JobAlertsSignup() {
       </form>}
     </div>}
     <nav aria-label="Follow Chirayu Power" className="job-alerts-socials">
-      <p>Follow us for career updates</p>
-      <ul>{socials.map(({label,href,Icon})=><li key={href}><a href={href} target="_blank" rel="noopener noreferrer" aria-label={`${label} (opens in a new tab)`}><Icon aria-hidden="true"/><span>{label}</span></a></li>)}</ul>
+      <p>Follow us for more updates</p>
+      <ul>{socials.map(({label,href,Icon,brand})=><li key={href}><a href={href} target="_blank" rel="noopener noreferrer" aria-label={`${label} (opens in a new tab)`}><span className={`social-brand social-brand-${brand}`} aria-hidden="true"><Icon/></span><span>{label}</span></a></li>)}</ul>
     </nav>
   </>;
 }

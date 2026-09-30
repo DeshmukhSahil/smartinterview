@@ -32,7 +32,14 @@ export async function POST(request: Request) {
       const parser = new PDFParse({ data: buffer });
       try { text = (await parser.getText()).text; } finally { await parser.destroy(); }
     } else text = buffer.toString("utf8");
-    if (text.trim().length < 80 || text.length > 60000) return Response.json({ error: "Use a readable text-based resume (80–60,000 characters). Scanned PDFs need OCR before uploading." }, { status: 400 });
+    // Deliberately not blocking on extracted-text length/readability -- a
+    // scanned PDF with no text layer legitimately extracts near-empty text,
+    // and nothing downstream needs it synchronously anymore (screening moved
+    // to the ERP's background worker; OCR, if any, happens there too). The
+    // only hard limits are file size/type above. Truncated, not rejected, if
+    // extraction somehow runs unexpectedly long -- a storage sanity cap, not
+    // a candidate-facing block.
+    if (text.length > 60000) text = text.slice(0, 60000);
     // AI fit screening (OpenRouter) no longer runs here: the candidate would
     // wait on it for every upload. The application is stored as "pending" and
     // the ERP's hiring-screening-worker screens it in the background, where HR
