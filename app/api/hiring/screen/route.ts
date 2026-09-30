@@ -1,6 +1,7 @@
+import { after } from "next/server";
 import { PDFParse } from "pdf-parse";
 import { applicantSchema, validateAnswers } from "@/lib/hiring/schema";
-import { activeCampaign, driveUploadResume, erp, failure, hash, newToken, screen } from "@/lib/hiring/server";
+import { activeCampaign, driveUploadResume, erp, failure, hash, newToken } from "@/lib/hiring/server";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 export async function POST(request: Request) {
@@ -32,9 +33,11 @@ export async function POST(request: Request) {
       try { text = (await parser.getText()).text; } finally { await parser.destroy(); }
     } else text = buffer.toString("utf8");
     if (text.trim().length < 80 || text.length > 60000) return Response.json({ error: "Use a readable text-based resume (80–60,000 characters). Scanned PDFs need OCR before uploading." }, { status: 400 });
-    // Avoid sending explicit contact details to the model where possible.
-    const redacted = text.replace(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/gi, "[email]").replace(/\+?\d[\d ()-]{8,}\d/g, "[phone]").split(a.name).join("[candidate]");
-    const assessment = await screen(c, redacted, { years: a.years, location: a.location, answers: a.answers });
+    // AI fit screening (OpenRouter) no longer runs here: the candidate would
+    // wait on it for every upload. The application is stored as "pending" and
+    // the ERP's hiring-screening-worker screens it in the background, where HR
+    // reviews the result in the Candidate Pipeline.
+    const assessment = { fit: "pending", reason: "", evidence: [] as string[], gaps: [] as string[], model: null, queued_at: new Date().toISOString() };
     const token = newToken();
     const id = crypto.randomUUID();
     const path = `${id}/resume.${pdf ? "pdf" : "txt"}`;
@@ -45,21 +48,24 @@ export async function POST(request: Request) {
     if (saved.error) throw saved.error;
     uploadedPath = null;
     // Best-effort archive copy in the ERP's Google Drive "Applied Resumes"
-    // folder. Never blocks or fails the application on error -- and the
-    // resume_url column lives in the ERP database (this repo's migrations
-    // only cover the Smart Interview DB), so this write is kept separate
-    // from the insert above in case that column isn't provisioned yet.
-    try {
-      const filename = `${a.name}_${c.role}_Resume.${pdf ? "pdf" : "txt"}`.replace(/[\\/:*?"<>|]/g, "_");
-      const driveUrl = await driveUploadResume({ filename, buffer, mimeType: pdf ? "application/pdf" : "text/plain" });
-      if (driveUrl) {
-        const urlSaved = await db.from("hiring_applications").update({ resume_url: driveUrl }).eq("id", id);
-        if (urlSaved.error) console.error("Could not store resume_url (has the ERP-side migration for this column run?)", urlSaved.error);
+    // folder, run AFTER the response is sent so the candidate never waits on
+    // Drive. Never fails the application -- and the resume_url column lives in
+    // the ERP database (this repo's migrations only cover the Smart Interview
+    // DB), so this write is kept separate from the insert above in case that
+    // column isn't provisioned yet.
+    after(async () => {
+      try {
+        const filename = `${a.name}_${c.role}_Resume.${pdf ? "pdf" : "txt"}`.replace(/[\\/:*?"<>|]/g, "_");
+        const driveUrl = await driveUploadResume({ filename, buffer, mimeType: pdf ? "application/pdf" : "text/plain" });
+        if (driveUrl) {
+          const urlSaved = await erp().from("hiring_applications").update({ resume_url: driveUrl }).eq("id", id);
+          if (urlSaved.error) console.error("Could not store resume_url (has the ERP-side migration for this column run?)", urlSaved.error);
+        }
+      } catch (e) {
+        console.error("Google Drive resume archive upload failed", e);
       }
-    } catch (e) {
-      console.error("Google Drive resume archive upload failed", e);
-    }
-    return Response.json({ token, assessment }, { headers: { "Cache-Control": "no-store" } });
+    });
+    return Response.json({ token }, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
     if (uploadedPath) await erp().storage.from("hiring-resumes").remove([uploadedPath]);
     return failure(e);
