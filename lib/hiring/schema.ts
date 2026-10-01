@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+// How a field's condition compares the other field's answer (see conditionMet).
+export const CONDITION_OPERATORS = [
+  "eq", "neq", "in", "nin", "contains", "not_contains", "gt", "gte", "lt", "lte", "filled", "empty",
+] as const;
+export type ConditionOperator = typeof CONDITION_OPERATORS[number];
+
 export const fieldSchema = z.object({
   id: z.string().regex(/^[a-z][a-z0-9_]{0,49}$/),
   label: z.string().trim().min(1).max(200),
@@ -18,12 +24,19 @@ export const fieldSchema = z.object({
   // campaign's own `locations` at render time, not anything stored here.
   options: z.array(z.string().trim().min(1).max(100)).max(30).default([]),
   // Conditional visibility: this field only renders (and, correspondingly,
-  // is not required/validated) when another field's answer equals `value`.
-  // Null = always shown. Evaluated against the same answers map every other
-  // field reads/writes -- core fields included, since they're keyed by
-  // their own CORE_FIELD id (e.g. "work_location_preference") the same way
-  // an HR-authored field is keyed by its own id.
-  condition: z.object({ fieldId: z.string(), value: z.string() }).nullable().default(null),
+  // is not required/validated) when another field's answer satisfies the
+  // rule -- see conditionMet(). Null = always shown. Evaluated against the
+  // same answers map every other field reads/writes -- core fields included,
+  // since they're keyed by their own CORE_FIELD id (e.g.
+  // "work_location_preference") the same way an HR-authored field is keyed
+  // by its own id. `operator` absent = "eq" (rules saved before operators).
+  condition: z.object({
+    fieldId: z.string(),
+    value: z.string().max(200).default(""),
+    operator: z.enum(CONDITION_OPERATORS).optional(),
+    // For "in" / "nin": the list of answers to match.
+    values: z.array(z.string().trim().min(1).max(100)).max(100).optional(),
+  }).nullable().default(null),
 }).refine(f => (f.type !== "select" && f.type !== "radio") || f.options.length > 0, "Select/radio fields need options");
 export const campaignSchema = z.object({
   // Optional for historical application snapshots and older API clients.
@@ -136,12 +149,46 @@ export function normalizeCoreFields(fields: Field[]): Field[] {
 
 // A field's condition (if any) is checked against the same answers a
 // candidate is filling in -- `lookup(fieldId)` returns that field's current
-// string value, or the joined values of a checkbox_group. No condition
-// means always visible/applicable.
+// string value, or the values of a checkbox_group. No condition means always
+// visible/applicable. Text comparisons ignore case and surrounding spaces.
+// A multi-value answer (checkbox_group) matches eq/in when ANY of its values
+// matches. For "in"/"nin" a text answer like "Nagpur, Maharashtra" also
+// matches "Nagpur" (any comma-separated part), so location rules work with
+// the city-search answers. Keep in sync with the ERP rule editor
+// (chirayu-id-flow src/components/hr/FieldConditionEditor.tsx).
+const norm = (s: string) => s.trim().toLowerCase();
 export function conditionMet(field: Field, lookup: (fieldId: string) => string | string[]): boolean {
-  if (!field.condition) return true;
-  const v = lookup(field.condition.fieldId);
-  return Array.isArray(v) ? v.includes(field.condition.value) : v === field.condition.value;
+  const c = field.condition;
+  if (!c) return true;
+  const raw = lookup(c.fieldId);
+  const answers = (Array.isArray(raw) ? raw : [raw]).map(String).filter(a => a.trim() !== "");
+  const target = norm(c.value ?? "");
+  const list = (c.values ?? []).map(norm).filter(Boolean);
+  const equalsAny = (wanted: string[]) =>
+    answers.some(a => wanted.includes(norm(a)));
+  const partsMatchAny = (wanted: string[]) =>
+    answers.some(a => wanted.includes(norm(a)) || a.split(",").some(part => wanted.includes(norm(part))));
+  const num = (s: string) => (s.trim() === "" ? NaN : Number(s));
+  const answerNum = answers.length === 1 ? num(answers[0]) : NaN;
+  const targetNum = num(c.value ?? "");
+  const compare = (fn: (a: number, b: number) => boolean) =>
+    Number.isFinite(answerNum) && Number.isFinite(targetNum) && fn(answerNum, targetNum);
+
+  switch (c.operator ?? "eq") {
+    case "eq": return equalsAny([target]);
+    case "neq": return answers.length > 0 && !equalsAny([target]);
+    case "in": return list.length > 0 && partsMatchAny(list);
+    case "nin": return answers.length > 0 && !partsMatchAny(list);
+    case "contains": return target !== "" && answers.some(a => norm(a).includes(target));
+    case "not_contains": return answers.length > 0 && !answers.some(a => norm(a).includes(target));
+    case "gt": return compare((a, b) => a > b);
+    case "gte": return compare((a, b) => a >= b);
+    case "lt": return compare((a, b) => a < b);
+    case "lte": return compare((a, b) => a <= b);
+    case "filled": return answers.length > 0;
+    case "empty": return answers.length === 0;
+    default: return false;
+  }
 }
 
 export const applicantSchema = z.object({

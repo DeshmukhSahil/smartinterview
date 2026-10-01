@@ -1365,233 +1365,193 @@ export default function HiringApplication() {
               <form key={c.id} ref={form} onSubmit={e => { e.preventDefault(); void submit(); }}>
                 <fieldset disabled={busy}>
                   <div className="hiring-fields">
-                    {/* The candidate's own current city -- a free, searchable
-                        entry (any city/town/village via India Post, not
-                        limited to this role's own locations) completely
-                        separate from the job's location shown above. Label,
-                        required-ness and visibility come from this campaign's
-                        resolved field config, so HR can relabel/hide/make
-                        optional per role without a code change. */}
-                    {(() => {
-                      const f = resolvedFields.find(x => x.id === "location");
-                      if (!f || !conditionMet(f, getFieldValue)) return null;
-                      return (
-                        <label>
-                          {f.label}{f.required ? " *" : ""}
-                          <SearchableSelect
-                            options={allCities}
-                            value={candidate.location}
-                            placeholder="Search your city or town..."
-                            ariaLabel={f.label}
-                            className={touched.location ? (errors.location ? "is-invalid" : "is-valid") : ""}
-                            asyncSearch={searchLocations}
-                            onBlur={() => markTouched("location")}
-                            onChange={val => {
-                              setCandidate({ ...candidate, location: val });
-                              markTouched("location");
-                              invalidate();
-                            }}
-                          />
-                          {touched.location && errors.location && (
-                            <span className="field-error-msg">{errors.location}</span>
-                          )}
-                        </label>
-                      );
-                    })()}
-
-                    {/* Separate from the job's location entirely -- this is
-                        the candidate's own willingness to relocate, not an
-                        agreement to any specific Chirayu location. */}
-                    {(() => {
-                      const f = resolvedFields.find(x => x.id === "work_location_preference");
-                      if (!f || !conditionMet(f, getFieldValue)) return null;
-                      return (
-                        <div className="field-group">
-                          {f.label}{f.required ? " *" : ""}
-                          <label className="relocate-checkbox-row">
-                            <input
-                              type="radio"
-                              name="work_location_preference"
-                              checked={candidate.work_location_preference === "near_current"}
-                              onChange={() => {
-                                setCandidate({ ...candidate, work_location_preference: "near_current" });
-                                markTouched("work_location_preference");
-                                invalidate();
-                              }}
-                            />
-                            I prefer to work near my current location
-                          </label>
-                          <label className="relocate-checkbox-row">
-                            <input
-                              type="radio"
-                              name="work_location_preference"
-                              checked={candidate.work_location_preference === "open_to_relocate"}
-                              onChange={() => {
-                                setCandidate({ ...candidate, work_location_preference: "open_to_relocate" });
-                                markTouched("work_location_preference");
-                                invalidate();
-                              }}
-                            />
-                            I&apos;m open to relocating for this role
-                          </label>
-                          {touched.work_location_preference && errors.work_location_preference && (
-                            <span className="field-error-msg">{errors.work_location_preference}</span>
-                          )}
-                        </div>
-                      );
-                    })()}
-
-                    {/* Only for a role open in more than one place -- which of
-                        the job's OWN locations the candidate would accept.
-                        Never shown for a single-location role, since there's
-                        nothing to choose there -- and, same as the two
-                        fields above, only when its own resolved condition
-                        (if any) is met. */}
-                    {c.locations.length > 1 && (() => {
-                      const f = resolvedFields.find(x => x.id === "comfortable_locations");
-                      return f && conditionMet(f, getFieldValue);
-                    })() && (
-                      <div className="field-group">
-                        {resolvedFields.find(x => x.id === "comfortable_locations")?.label || "I am comfortable working at"} *
-                        {c.locations.map(loc => {
-                          const checked = candidate.comfortable_locations.includes(loc);
-                          return (
-                            <label key={loc} className="relocate-checkbox-row">
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={() => {
-                                  setCandidate({
-                                    ...candidate,
-                                    comfortable_locations: checked
-                                      ? candidate.comfortable_locations.filter(l => l !== loc)
-                                      : [...candidate.comfortable_locations, loc],
-                                  });
-                                  markTouched("comfortable_locations");
-                                  invalidate();
-                                }}
-                              />
-                              {loc}, {stateForLocation(loc)}
-                            </label>
-                          );
-                        })}
-                        {touched.comfortable_locations && errors.comfortable_locations && (
-                          <span className="field-error-msg">{errors.comfortable_locations}</span>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Full Name */}
-                    <label>
-                      Full name *
-                      <input
-                        required
-                        type="text"
-                        minLength={2}
-                        maxLength={150}
-                        autoComplete="name"
-                        placeholder="e.g. John Doe"
-                        className={touched.name ? (errors.name ? "is-invalid" : "is-valid") : ""}
-                        value={candidate.name}
-                        onBlur={() => markTouched("name")}
-                        onChange={e => {
-                          setCandidate({ ...candidate, name: e.target.value });
-                          markTouched("name");
-                          invalidate();
-                        }}
-                      />
-                      {touched.name && errors.name && (
-                        <span className="field-error-msg">{errors.name}</span>
-                      )}
-                    </label>
-
-                    {/* Email */}
-                    <label>
-                      Email address *
-                      <input
-                        required
-                        type="email"
-                        maxLength={254}
-                        autoComplete="email"
-                        placeholder="e.g. name@example.com"
-                        className={touched.email ? (errors.email ? "is-invalid" : "is-valid") : ""}
-                        value={candidate.email}
-                        onBlur={() => markTouched("email")}
-                        onChange={e => {
-                          setCandidate({ ...candidate, email: e.target.value });
-                          markTouched("email");
-                          invalidate();
-                        }}
-                      />
-                      {touched.email && errors.email ? (
-                        <span className="field-error-msg">{errors.email}</span>
-                      ) : (
-                        <span className="field-hint">Your interview access details will be sent here.</span>
-                      )}
-                    </label>
-
-                    {/* Phone Number - sanitized on input */}
-                    <label>
-                      Phone number *
-                      <input
-                        required
-                        type="tel"
-                        maxLength={25}
-                        autoComplete="tel"
-                        placeholder="e.g. +91 98765 43210"
-                        className={touched.phone ? (errors.phone ? "is-invalid" : "is-valid") : ""}
-                        value={candidate.phone}
-                        onBlur={() => markTouched("phone")}
-                        onChange={e => {
-                          // Prevent typing invalid characters like letters
-                          const cleaned = e.target.value.replace(/[^0-9+\s\-()]/g, "");
-                          setCandidate({ ...candidate, phone: cleaned });
-                          markTouched("phone");
-                          invalidate();
-                        }}
-                      />
-                      {touched.phone && errors.phone ? (
-                        <span className="field-error-msg">{errors.phone}</span>
-                      ) : (
-                        <span className="field-hint">Include country code if applying from abroad.</span>
-                      )}
-                    </label>
-
-                    {/* Total Experience */}
-                    <label>
-                      Total experience (years) *
-                      <input
-                        required
-                        type="number"
-                        min="0"
-                        max="60"
-                        step="0.1"
-                        placeholder="e.g. 3.5"
-                        className={touched.years ? (errors.years ? "is-invalid" : "is-valid") : ""}
-                        value={candidate.years}
-                        onBlur={() => markTouched("years")}
-                        onChange={e => {
-                          setCandidate({ ...candidate, years: e.target.value });
-                          markTouched("years");
-                          invalidate();
-                        }}
-                      />
-                      {touched.years && errors.years && (
-                        <span className="field-error-msg">{errors.years}</span>
-                      )}
-                    </label>
-
-                    {/* Dynamic Campaign Custom Fields -- HR's own questions
-                        only (resolvedFields also carries the 9 core fields,
-                        already rendered above as their own dedicated
-                        widgets; a core-id override entry must not also
-                        render here as a second, generic input). Skips a
-                        field entirely when its own condition isn't met,
-                        same as every core field above. */}
-                    {resolvedFields.filter(f => !isCoreFieldId(f.id) && conditionMet(f, getFieldValue)).map(f => {
+                    {/* One loop, real stored order -- resolvedFields is
+                        exactly c.fields (core ids normalized in place, never
+                        reordered/re-synthesized). HR can now interleave core
+                        fields and custom questions freely via the ERP's
+                        editor, so position in that array is what actually
+                        renders; nothing here is hardcoded to come first. */}
+                    {resolvedFields.filter(f => conditionMet(f, getFieldValue)).map(f => {
                       const isFieldTouched = !!touched[f.id];
                       const fieldError = errors[f.id];
                       const inputClass = isFieldTouched ? (fieldError ? "is-invalid" : "is-valid") : "";
+
+                      // Consent: distinct styling/structure (full-width,
+                      // its own CSS class), not the shared label+input
+                      // layout every other field type uses below.
+                      if (f.id === "consent") {
+                        return (
+                          <label key={f.id} className={`hiring-consent ${isFieldTouched && fieldError ? "is-invalid" : ""}`}>
+                            <input
+                              type="checkbox"
+                              required={f.required}
+                              checked={candidate.consent}
+                              onChange={e => {
+                                setCandidate({ ...candidate, consent: e.target.checked });
+                                markTouched("consent");
+                                invalidate();
+                              }}
+                            />
+                            <span>
+                              {f.label}{f.required ? " *" : ""}
+                            </span>
+                            {isFieldTouched && fieldError && (
+                              <span className="field-error-msg" style={{ marginTop: "4px", display: "block" }}>{fieldError}</span>
+                            )}
+                          </label>
+                        );
+                      }
+
+                      // Resume: a file input (its real value never flows
+                      // through `answers`/`candidate` -- see fileInput ref).
+                      if (f.id === "resume") {
+                        return (
+                          <label key={f.id} className="hiring-upload">
+                            <strong>{f.label}{f.required ? " *" : ""}</strong>
+                            <span>PDF or TXT · up to 4 MB</span>
+                            <input
+                              ref={fileInput}
+                              type="file"
+                              accept=".pdf,.txt"
+                              onChange={() => {
+                                setHasResume(!!fileInput.current?.files?.length);
+                                invalidate();
+                              }}
+                            />
+                          </label>
+                        );
+                      }
+
+                      // Current location: free, searchable entry (any city/
+                      // town/village via India Post, not limited to this
+                      // role's own locations) -- the candidate's own city,
+                      // separate from the job's location shown above.
+                      if (f.id === "location") {
+                        return (
+                          <label key={f.id}>
+                            {f.label}{f.required ? " *" : ""}
+                            <SearchableSelect
+                              options={allCities}
+                              value={candidate.location}
+                              placeholder="Search your city or town..."
+                              ariaLabel={f.label}
+                              className={inputClass}
+                              asyncSearch={searchLocations}
+                              onBlur={() => markTouched("location")}
+                              onChange={val => {
+                                setCandidate({ ...candidate, location: val });
+                                markTouched("location");
+                                invalidate();
+                              }}
+                            />
+                            {isFieldTouched && fieldError && (
+                              <span className="field-error-msg">{fieldError}</span>
+                            )}
+                          </label>
+                        );
+                      }
+
+                      // Work location preference: fixed two-option radio --
+                      // the candidate's own willingness to relocate, not an
+                      // agreement to any specific Chirayu location.
+                      if (f.id === "work_location_preference") {
+                        return (
+                          <div key={f.id} className="field-group">
+                            {f.label}{f.required ? " *" : ""}
+                            <label className="relocate-checkbox-row">
+                              <input
+                                type="radio"
+                                name="work_location_preference"
+                                checked={candidate.work_location_preference === "near_current"}
+                                onChange={() => {
+                                  setCandidate({ ...candidate, work_location_preference: "near_current" });
+                                  markTouched("work_location_preference");
+                                  invalidate();
+                                }}
+                              />
+                              I prefer to work near my current location
+                            </label>
+                            <label className="relocate-checkbox-row">
+                              <input
+                                type="radio"
+                                name="work_location_preference"
+                                checked={candidate.work_location_preference === "open_to_relocate"}
+                                onChange={() => {
+                                  setCandidate({ ...candidate, work_location_preference: "open_to_relocate" });
+                                  markTouched("work_location_preference");
+                                  invalidate();
+                                }}
+                              />
+                              I&apos;m open to relocating for this role
+                            </label>
+                            {isFieldTouched && fieldError && (
+                              <span className="field-error-msg">{fieldError}</span>
+                            )}
+                          </div>
+                        );
+                      }
+
+                      // Comfortable locations: only meaningful for a role
+                      // open in more than one place -- which of the job's
+                      // OWN locations the candidate would accept. Options
+                      // come from c.locations, never f.options.
+                      if (f.id === "comfortable_locations") {
+                        if (c.locations.length <= 1) return null;
+                        return (
+                          <div key={f.id} className="field-group">
+                            {f.label}{f.required ? " *" : ""}
+                            {c.locations.map(loc => {
+                              const checked = candidate.comfortable_locations.includes(loc);
+                              return (
+                                <label key={loc} className="relocate-checkbox-row">
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={() => {
+                                      setCandidate({
+                                        ...candidate,
+                                        comfortable_locations: checked
+                                          ? candidate.comfortable_locations.filter(l => l !== loc)
+                                          : [...candidate.comfortable_locations, loc],
+                                      });
+                                      markTouched("comfortable_locations");
+                                      invalidate();
+                                    }}
+                                  />
+                                  {loc}, {stateForLocation(loc)}
+                                </label>
+                              );
+                            })}
+                            {isFieldTouched && fieldError && (
+                              <span className="field-error-msg">{fieldError}</span>
+                            )}
+                          </div>
+                        );
+                      }
+
+                      // name/email/phone/years: plain typed inputs bound to
+                      // their own candidate.* property; everything else
+                      // (HR's own custom questions) binds to answers[f.id].
+                      const isCoreTextField = f.id === "name" || f.id === "email" || f.id === "phone" || f.id === "years";
+                      const coreValue = f.id === "name" ? candidate.name
+                        : f.id === "email" ? candidate.email
+                        : f.id === "phone" ? candidate.phone
+                        : f.id === "years" ? candidate.years
+                        : "";
+                      const setCoreValue = (v: string) => {
+                        if (f.id === "name") setCandidate({ ...candidate, name: v });
+                        else if (f.id === "email") setCandidate({ ...candidate, email: v });
+                        else if (f.id === "phone") setCandidate({ ...candidate, phone: v.replace(/[^0-9+\s\-()]/g, "") });
+                        else if (f.id === "years") setCandidate({ ...candidate, years: v });
+                      };
+                      const value = isCoreTextField ? coreValue : (answers[f.id] || "");
+                      const setValue = isCoreTextField
+                        ? setCoreValue
+                        : (v: string) => setAnswers({ ...answers, [f.id]: v });
+                      const htmlType = f.id === "email" ? "email" : f.id === "phone" ? "tel" : f.id === "years" ? "number" : f.type === "number" ? "number" : "text";
+                      const hint = f.id === "email" ? "Your interview access details will be sent here."
+                        : f.id === "phone" ? "Include country code if applying from abroad."
+                        : null;
 
                       return (
                         <label key={f.id}>
@@ -1600,12 +1560,12 @@ export default function HiringApplication() {
                             f.options.length > 3 ? (
                               <SearchableSelect
                                 options={f.options}
-                                value={answers[f.id] || ""}
+                                value={value}
                                 placeholder={`Search or select ${f.label.toLowerCase()}...`}
                                 className={inputClass}
                                 onBlur={() => markTouched(f.id)}
                                 onChange={val => {
-                                  setAnswers({ ...answers, [f.id]: val });
+                                  setValue(val);
                                   markTouched(f.id);
                                   invalidate();
                                 }}
@@ -1614,10 +1574,10 @@ export default function HiringApplication() {
                               <select
                                 required={f.required}
                                 className={inputClass}
-                                value={answers[f.id] || ""}
+                                value={value}
                                 onBlur={() => markTouched(f.id)}
                                 onChange={e => {
-                                  setAnswers({ ...answers, [f.id]: e.target.value });
+                                  setValue(e.target.value);
                                   markTouched(f.id);
                                   invalidate();
                                 }}
@@ -1634,36 +1594,40 @@ export default function HiringApplication() {
                               maxLength={2000}
                               placeholder={`Enter details for ${f.label.toLowerCase()}...`}
                               className={inputClass}
-                              value={answers[f.id] || ""}
+                              value={value}
                               onBlur={() => markTouched(f.id)}
                               onChange={e => {
-                                setAnswers({ ...answers, [f.id]: e.target.value });
+                                setValue(e.target.value);
                                 markTouched(f.id);
                                 invalidate();
                               }}
                             />
                           ) : (
                             <input
-                              type={f.type}
-                              min={f.type === "number" ? 0 : undefined}
-                              max={f.type === "number" ? 60 : undefined}
-                              step={f.type === "number" ? "0.1" : undefined}
-                              maxLength={2000}
-                              placeholder={f.type === "number" ? "e.g. 2" : ""}
                               required={f.required}
+                              type={htmlType}
+                              min={htmlType === "number" ? 0 : undefined}
+                              max={f.id === "years" ? 60 : htmlType === "number" ? 60 : undefined}
+                              step={htmlType === "number" ? "0.1" : undefined}
+                              maxLength={f.id === "email" ? 254 : f.id === "phone" ? 25 : f.id === "name" ? 150 : 2000}
+                              minLength={f.id === "name" ? 2 : undefined}
+                              autoComplete={f.id === "name" ? "name" : f.id === "email" ? "email" : f.id === "phone" ? "tel" : undefined}
+                              placeholder={f.id === "name" ? "e.g. John Doe" : f.id === "email" ? "e.g. name@example.com" : f.id === "phone" ? "e.g. +91 98765 43210" : f.id === "years" ? "e.g. 3.5" : f.type === "number" ? "e.g. 2" : ""}
                               className={inputClass}
-                              value={answers[f.id] || ""}
+                              value={value}
                               onBlur={() => markTouched(f.id)}
                               onChange={e => {
-                                setAnswers({ ...answers, [f.id]: e.target.value });
+                                setValue(e.target.value);
                                 markTouched(f.id);
                                 invalidate();
                               }}
                             />
                           )}
-                          {isFieldTouched && fieldError && (
+                          {isFieldTouched && fieldError ? (
                             <span className="field-error-msg">{fieldError}</span>
-                          )}
+                          ) : hint ? (
+                            <span className="field-hint">{hint}</span>
+                          ) : null}
                           {f.id === "desired_role" && c.job_code === GENERAL_APPLICATION_JOB_CODE && (() => {
                             const matches = matchOpenCampaigns(answers[f.id] || "");
                             if (!matches.length) return null;
@@ -1692,41 +1656,6 @@ export default function HiringApplication() {
                       );
                     })}
                   </div>
-
-                  {/* Consent Checkbox */}
-                  <label className={`hiring-consent ${touched.consent && errors.consent ? "is-invalid" : ""}`}>
-                    <input
-                      type="checkbox"
-                      required
-                      checked={candidate.consent}
-                      onChange={e => {
-                        setCandidate({ ...candidate, consent: e.target.checked });
-                        markTouched("consent");
-                        invalidate();
-                      }}
-                    />
-                    <span>
-                      I agree to share my application and resume with Chirayu Power HR and to AI-assisted screening through OpenRouter and its model providers. I understand HR makes the final decision. *
-                    </span>
-                  </label>
-                  {touched.consent && errors.consent && (
-                    <span className="field-error-msg" style={{ marginBottom: "16px", display: "block" }}>{errors.consent}</span>
-                  )}
-
-                  {/* Resume Upload */}
-                  <label className="hiring-upload">
-                    <strong>Upload your resume *</strong>
-                    <span>PDF or TXT · up to 4 MB</span>
-                    <input
-                      ref={fileInput}
-                      type="file"
-                      accept=".pdf,.txt"
-                      onChange={() => {
-                        setHasResume(!!fileInput.current?.files?.length);
-                        invalidate();
-                      }}
-                    />
-                  </label>
                 </fieldset>
 
                 {busy && (
