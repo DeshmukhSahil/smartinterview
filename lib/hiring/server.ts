@@ -33,6 +33,20 @@ export async function requireHR(request: Request, action: "view" | "edit") {
   if (rightsError || !data) throw new Error("Forbidden");
   return { email: user.user.email as string };
 }
+// Same ERP-session check as requireHR, but for any one ERP right
+// (public.has_right, the DB twin of the ERP's canAccess). Used where the
+// action belongs to a different ERP screen than Create Interview — e.g. the
+// Candidate Pipeline's "Edit role" needs hr.candidate_pipeline.edit.
+export async function requireErpRight(request: Request, module: string, submodule: string, action: string) {
+  const token = request.headers.get("authorization")?.replace(/^Bearer /, "");
+  if (!token) throw new Error("Unauthorized");
+  const client = createClient(env("ERP_SUPABASE_URL"), env("ERP_SUPABASE_ANON_KEY"), { global: { headers: { Authorization: `Bearer ${token}` } }, auth: { persistSession: false } });
+  const { data: user, error } = await client.auth.getUser(token);
+  if (error || !user.user) throw new Error("Unauthorized");
+  const { data, error: rightsError } = await client.rpc("has_right", { _module: module, _submodule: submodule, _action: action });
+  if (rightsError || !data) throw new Error("Forbidden");
+  return { email: user.user.email as string, userId: user.user.id };
+}
 // Server-to-server auth for the ERP's interview-transcript-ingest Edge
 // Function (AI-Transcribe -> ERP -> here). Not an HR browser session, so
 // requireHR() doesn't apply -- the ERP has already done the real
