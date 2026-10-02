@@ -145,6 +145,27 @@
   border-color: #07549b;
 }
 
+.job-detail-share {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: white;
+  border: 1px solid #dbe9fb;
+  color: #18314a;
+  font-weight: 600;
+  font-size: 13px;
+  font-family: inherit;
+  padding: 11px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.job-detail-share:hover {
+  background: #f6faff;
+  border-color: #07549b;
+}
+
 .job-detail-apply {
   background: #07549b;
   color: white;
@@ -301,6 +322,7 @@
     justify-content: stretch;
   }
   .job-detail-back,
+  .job-detail-share,
   .job-detail-apply {
     flex: 1;
     justify-content: center;

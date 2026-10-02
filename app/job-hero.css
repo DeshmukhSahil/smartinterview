@@ -98,6 +98,13 @@
   font-weight: 700;
 }
 
+.job-hero-count-skeleton {
+  display: inline-block;
+  width: 180px;
+  height: 15px;
+  vertical-align: middle;
+}
+
 .job-hero-search {
   max-width: 640px;
   display: flex;
@@ -794,6 +801,51 @@
   margin-bottom: 6px;
   box-shadow: 0 6px 14px rgba(43, 58, 143, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.18);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Department grid skeleton -- same .role-tile/.role-tile-card shell as the
+   real tiles (so sizing/spacing is pixel-identical, no layout shift once
+   real data arrives), just shimmer blocks instead of an icon/label. */
+.role-tile-skeleton .role-tile-card {
+  cursor: default;
+}
+
+.skeleton-block {
+  background: linear-gradient(90deg, #eef1f6 25%, #e3e8f0 37%, #eef1f6 63%);
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+  border-radius: 6px;
+}
+
+.skeleton-circle {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  margin-bottom: 6px;
+}
+
+.skeleton-line {
+  height: 11px;
+}
+
+.skeleton-line-title {
+  width: 72%;
+  height: 13px;
+}
+
+.skeleton-line-sub {
+  width: 48%;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-block {
+    animation: none;
+  }
 }
 
 .role-tile:hover:not(:disabled) .role-tile-icon {

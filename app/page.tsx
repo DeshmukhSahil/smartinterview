@@ -1,6 +1,7 @@
 "use client";
 import JobAlertsSignup from "@/components/JobAlertsSignup";
-import { useEffect, useRef, useState, useMemo } from "react";
+import Image from "next/image";
+import { Suspense, useEffect, useRef, useState, useMemo } from "react";
 import {
   Search,
   MapPin,
@@ -33,9 +34,15 @@ import {
   Users,
   ShieldCheck,
   Sun,
+  Loader2,
+  Share2,
+  Check,
 } from "lucide-react";
 import type { Campaign } from "@/lib/hiring/schema";
 import { normalizeCoreFields, conditionMet, isCoreFieldId } from "@/lib/hiring/schema";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
+import { isValidPhoneNumber } from "libphonenumber-js";
 import type { HiringDepartment } from "@/lib/hiring/hiringDepartments";
 import { stateForLocation } from "@/lib/hiring/locations";
 import { careerSlug, departmentPath, rolePath, jobPath, searchPath } from "@/lib/hiring/routes";
@@ -366,7 +373,7 @@ function SearchableSelect({
   );
 }
 
-export default function HiringApplication() {
+function HiringApplication() {
   const [departments, setDepartments] = useState<HiringDepartment[]>([]);
   const referenceRoles = useMemo(() => departments.flatMap(d => d.reference_roles), [departments]);
   const [campaigns, setCampaigns] = useState<PublicCampaign[]>([]);
@@ -403,6 +410,10 @@ export default function HiringApplication() {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [hasResume, setHasResume] = useState(false);
   const [receipt, setReceipt] = useState<{ reference: string; email_status: string } | null>(null);
+  // Brief "Copied!" confirmation after the clipboard fallback below --
+  // navigator.share() itself needs no extra UI state, the OS share sheet is
+  // its own confirmation.
+  const [shareCopied, setShareCopied] = useState(false);
   const form = useRef<HTMLFormElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const cityBarRef = useRef<HTMLDivElement>(null);
@@ -523,6 +534,26 @@ export default function HiringApplication() {
   }
   function runSearch() {
     applySearch(roleQueryDraft, cityFilterDraft);
+  }
+
+  // Native share sheet when available (mobile browsers, mostly); falls back
+  // to copying the link for desktop browsers that don't implement
+  // navigator.share at all.
+  async function shareJob(job: PublicCampaign) {
+    const url = `${window.location.origin}${BASE_PATH}${jobPath(job.id)}`;
+    const shareData = { title: `${job.role} at Chirayu Power`, text: `Check out this opening at Chirayu Power: ${job.role}`, url };
+    if (navigator.share) {
+      try { await navigator.share(shareData); } catch { /* user cancelled -- not an error */ }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    } catch {
+      // Clipboard API blocked/unavailable too -- last resort.
+      window.prompt("Copy this link:", url);
+    }
   }
 
   // Opens the one catch-all campaign's apply form, pre-filling its
@@ -722,17 +753,14 @@ export default function HiringApplication() {
       errs.email = "Please enter a valid email address (e.g. name@domain.com).";
     }
 
-    // 4. Phone Number
-    const rawPhone = candidate.phone.trim();
-    const phoneDigits = rawPhone.replace(/\D/g, "");
-    if (!rawPhone) {
+    // 4. Phone Number -- real per-country validation (libphonenumber-js),
+    // not a one-size-fits-all digit-count check. candidate.phone is the
+    // E.164 string react-phone-number-input produces (e.g. "+919876543210"
+    // for a 10-digit Indian number).
+    if (!candidate.phone) {
       errs.phone = "Phone number is required.";
-    } else if (/[^0-9+\s\-()]/.test(rawPhone)) {
-      errs.phone = "Phone number contains invalid characters (numbers, +, -, () only).";
-    } else if (phoneDigits.length < 10) {
-      errs.phone = `Phone number requires at least 10 digits (currently ${phoneDigits.length}).`;
-    } else if (phoneDigits.length > 15) {
-      errs.phone = "Phone number cannot exceed 15 digits.";
+    } else if (!isValidPhoneNumber(candidate.phone)) {
+      errs.phone = "Enter a valid phone number for the selected country.";
     }
 
     // 5. Total Experience
@@ -889,11 +917,16 @@ export default function HiringApplication() {
               <div className="job-hero-grid">
                 <div className="job-hero-text">
                   <h1>Find your next role at Chirayu Power</h1>
-                  <p>
-                    {loading ? "Loading open roles…" : (
-                      <><strong>{totalActiveJobs}+</strong> active {totalActiveJobs === 1 ? "role" : "roles"} to grab</>
-                    )}
-                  </p>
+                  {loading ? (
+                    <p role="status">
+                      <span className="skeleton-block skeleton-line job-hero-count-skeleton" />
+                      <span className="visually-hidden">Loading open roles…</span>
+                    </p>
+                  ) : (
+                    <p>
+                      <strong>{totalActiveJobs}+</strong> active {totalActiveJobs === 1 ? "role" : "roles"} to grab
+                    </p>
+                  )}
                   <div className="job-hero-search">
                     <div className="job-hero-field job-hero-role" ref={roleFieldRef}>
                       <Search size={18} aria-hidden="true" />
@@ -955,12 +988,22 @@ export default function HiringApplication() {
                   </div>
                 </div>
                 <div className="job-hero-image">
-                  <img
+                  {/* This is the page's LCP element (largest above-the-fold
+                      image) -- next/image + priority emits a <link
+                      rel="preload"> for it in the document head and skips
+                      lazy-loading, instead of discovering it only after the
+                      JS bundle parses like a plain <img> would. Explicit
+                      width/height (already correct, matching the source
+                      asset's real aspect ratio) is what actually prevents
+                      the image's own CLS once the section is visible. */}
+                  <Image
                     src={`${BASE_PATH}/brand/hero-hiring-illustration.webp`}
                     alt=""
                     aria-hidden="true"
                     width={514}
                     height={356}
+                    priority
+                    fetchPriority="high"
                   />
                 </div>
               </div>
@@ -989,7 +1032,25 @@ export default function HiringApplication() {
             </button>
           </nav>
 
-          {loading && <p role="status">Loading opportunities…</p>}
+          {loading && (
+            <section className="role-tiles-panel" aria-busy="true">
+              <div className="role-tiles-tabs">
+                <span className="current">Departments & Roles</span>
+              </div>
+              <div className="role-tiles-grid">
+                {Array.from({ length: 14 }).map((_, i) => (
+                  <div key={i} className="role-tile role-tile-plain role-tile-skeleton" aria-hidden="true">
+                    <span className="role-tile-card">
+                      <span className="skeleton-block skeleton-circle" />
+                      <span className="skeleton-block skeleton-line skeleton-line-title" />
+                      <span className="skeleton-block skeleton-line skeleton-line-sub" />
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <p role="status" className="visually-hidden">Loading opportunities…</p>
+            </section>
+          )}
           {routeUnavailable && <section className="no-results-panel" role="status"><h1>This opportunity is unavailable</h1><p>The link may be incorrect, or the job may no longer be published.</p><a href={`${BASE_PATH}/`} onClick={event => followLink(event, "/")}>Browse all departments and jobs</a></section>}
 
           {!c && !loading && cityFilter && !cityFilterHasRoles && (
@@ -1268,6 +1329,17 @@ export default function HiringApplication() {
                   <button type="button" className="job-detail-back" onClick={() => setSelected("")}>
                     <ArrowLeft size={15} aria-hidden="true" /> See all jobs
                   </button>
+                  <button type="button" className="job-detail-share" onClick={() => void shareJob(c)}>
+                    {shareCopied ? (
+                      <>
+                        <Check size={15} aria-hidden="true" /> Link copied
+                      </>
+                    ) : (
+                      <>
+                        <Share2 size={15} aria-hidden="true" /> Share
+                      </>
+                    )}
+                  </button>
                   <button
                     type="button"
                     className="job-detail-apply"
@@ -1529,29 +1601,53 @@ export default function HiringApplication() {
                         );
                       }
 
-                      // name/email/phone/years: plain typed inputs bound to
-                      // their own candidate.* property; everything else
-                      // (HR's own custom questions) binds to answers[f.id].
-                      const isCoreTextField = f.id === "name" || f.id === "email" || f.id === "phone" || f.id === "years";
+                      // Phone: a real country-code-aware input (react-phone-
+                      // number-input + libphonenumber-js), defaulting to
+                      // India, storing/validating the full E.164 string --
+                      // not a hand-rolled length/character check.
+                      if (f.id === "phone") {
+                        return (
+                          <label key={f.id}>
+                            {f.label}{f.required ? " *" : ""}
+                            <PhoneInput
+                              international
+                              defaultCountry="IN"
+                              countryCallingCodeEditable={false}
+                              className={inputClass}
+                              value={candidate.phone || undefined}
+                              onBlur={() => markTouched("phone")}
+                              onChange={val => {
+                                setCandidate({ ...candidate, phone: val || "" });
+                                markTouched("phone");
+                                invalidate();
+                              }}
+                            />
+                            {isFieldTouched && fieldError && (
+                              <span className="field-error-msg">{fieldError}</span>
+                            )}
+                          </label>
+                        );
+                      }
+
+                      // name/email/years: plain typed inputs bound to their
+                      // own candidate.* property; everything else (HR's own
+                      // custom questions) binds to answers[f.id].
+                      const isCoreTextField = f.id === "name" || f.id === "email" || f.id === "years";
                       const coreValue = f.id === "name" ? candidate.name
                         : f.id === "email" ? candidate.email
-                        : f.id === "phone" ? candidate.phone
                         : f.id === "years" ? candidate.years
                         : "";
                       const setCoreValue = (v: string) => {
                         if (f.id === "name") setCandidate({ ...candidate, name: v });
                         else if (f.id === "email") setCandidate({ ...candidate, email: v });
-                        else if (f.id === "phone") setCandidate({ ...candidate, phone: v.replace(/[^0-9+\s\-()]/g, "") });
                         else if (f.id === "years") setCandidate({ ...candidate, years: v });
                       };
                       const value = isCoreTextField ? coreValue : (answers[f.id] || "");
                       const setValue = isCoreTextField
                         ? setCoreValue
                         : (v: string) => setAnswers({ ...answers, [f.id]: v });
-                      const htmlType = f.id === "email" ? "email" : f.id === "phone" ? "tel" : f.id === "years" ? "number" : f.type === "number" ? "number" : "text";
-                      const hint = f.id === "email" ? "Your interview access details will be sent here."
-                        : f.id === "phone" ? "Include country code if applying from abroad."
-                        : null;
+                      const htmlType = f.id === "email" ? "email" : f.id === "years" ? "number" : f.type === "number" ? "number" : "text";
+                      const hint = f.id === "email" ? "Your interview access details will be sent here." : null;
 
                       return (
                         <label key={f.id}>
@@ -1609,10 +1705,10 @@ export default function HiringApplication() {
                               min={htmlType === "number" ? 0 : undefined}
                               max={f.id === "years" ? 60 : htmlType === "number" ? 60 : undefined}
                               step={htmlType === "number" ? "0.1" : undefined}
-                              maxLength={f.id === "email" ? 254 : f.id === "phone" ? 25 : f.id === "name" ? 150 : 2000}
+                              maxLength={f.id === "email" ? 254 : f.id === "name" ? 150 : 2000}
                               minLength={f.id === "name" ? 2 : undefined}
-                              autoComplete={f.id === "name" ? "name" : f.id === "email" ? "email" : f.id === "phone" ? "tel" : undefined}
-                              placeholder={f.id === "name" ? "e.g. John Doe" : f.id === "email" ? "e.g. name@example.com" : f.id === "phone" ? "e.g. +91 98765 43210" : f.id === "years" ? "e.g. 3.5" : f.type === "number" ? "e.g. 2" : ""}
+                              autoComplete={f.id === "name" ? "name" : f.id === "email" ? "email" : undefined}
+                              placeholder={f.id === "name" ? "e.g. John Doe" : f.id === "email" ? "e.g. name@example.com" : f.id === "years" ? "e.g. 3.5" : f.type === "number" ? "e.g. 2" : ""}
                               className={inputClass}
                               value={value}
                               onBlur={() => markTouched(f.id)}
@@ -1659,13 +1755,21 @@ export default function HiringApplication() {
                 </fieldset>
 
                 {busy && (
-                  <p role="status">
+                  <p role="status" className="hiring-submitting-status">
+                    <Loader2 size={16} className="hiring-spinner" aria-hidden="true" />
                     Submitting your application and resume…
                   </p>
                 )}
 
                 <button className="hiring-submit" type="submit" disabled={!hasResume || busy || hasFormErrors}>
-                  {busy ? "Please wait…" : "Submit application →"}
+                  {busy ? (
+                    <>
+                      <Loader2 size={16} className="hiring-spinner" aria-hidden="true" />
+                      Please wait…
+                    </>
+                  ) : (
+                    "Submit application →"
+                  )}
                 </button>
               </form>
             </section>
@@ -1677,6 +1781,19 @@ export default function HiringApplication() {
       <footer className="hiring-footer"><span>CHIRAYU POWER PVT. LTD. · ENERGY WITH INTEGRITY</span><span>BUILD SOMETHING THAT MATTERS. ↗</span></footer>
     </main>
   </>
+  );
+}
+
+// useCareersRoute() uses useSearchParams(), which Next requires a Suspense
+// boundary for (otherwise it forces a client-side-only bailout at build
+// time). The fallback is never actually visible in practice -- campaigns
+// are also fetched client-side, so this component already renders its own
+// "Loading open roles…" state immediately on mount.
+export default function HiringApplicationPage() {
+  return (
+    <Suspense fallback={null}>
+      <HiringApplication />
+    </Suspense>
   );
 }
 

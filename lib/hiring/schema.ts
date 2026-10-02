@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isValidPhoneNumber } from "libphonenumber-js";
 
 // How a field's condition compares the other field's answer (see conditionMet).
 export const CONDITION_OPERATORS = [
@@ -194,7 +195,11 @@ export function conditionMet(field: Field, lookup: (fieldId: string) => string |
 export const applicantSchema = z.object({
   campaign_id: z.string().uuid(), name: z.string().trim().min(2).max(150),
   email: z.string().trim().email().max(254).transform(s => s.toLowerCase()),
-  phone: z.string().trim().regex(/^[+\d ()-]{7,25}$/),
+  // E.164 string (e.g. "+919876543210") from the country-code-aware phone
+  // input -- libphonenumber-js validates per the actual selected country's
+  // real number rules (10 digits for India, whatever's correct elsewhere),
+  // not a one-size-fits-all length/character check.
+  phone: z.string().trim().refine(v => isValidPhoneNumber(v), "Enter a valid phone number"),
   // The candidate's own current city (free entry, via the India Post search --
   // see searchLocations() in app/page.tsx), completely independent of the job's
   // own approved locations (Campaign.locations). Deliberately not validated

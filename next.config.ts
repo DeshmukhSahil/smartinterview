@@ -20,7 +20,8 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  serverExternalPackages: ["pdf-parse", "@napi-rs/canvas"],
+  // tesseract.js spawns its own worker script, so it must not be bundled either.
+  serverExternalPackages: ["pdf-parse", "@napi-rs/canvas", "tesseract.js"],
   // Serve the mounted careers SPA at shareable URLs, including on refresh.
   // Next applies the configured basePath to both sides automatically.
   async rewrites() {

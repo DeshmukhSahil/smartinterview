@@ -12,10 +12,7 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  { label: "Home", href: "https://chirayupower.com" },
-  { label: "Services", href: "https://chirayupower.com/services-solutions" },
-  { label: "Case Study", href: "https://chirayupower.com/utility-scale-solar-projects" },
-  { label: "Careers", href: "/" },
+  { label: "Career Home", href: "/" },
   { label: "Contact Us", href: "https://chirayupower.com/contact-us" },
 ];
 
@@ -47,8 +44,9 @@ export default function Navbar() {
   return (
     <nav className={`${styles.navbar} ${isScrolled ? styles.scrolled : ""}`}>
       <div className={styles.navbarInner}>
-        {/* Brand Area */}
-        <Link href="/" className={styles.brandArea} aria-label="Chirayu Power Home">
+        {/* Brand Area -- always the main company site, not this careers
+            app's own home (that's what the "Career Home" nav link is for). */}
+        <a href="https://chirayupower.com" className={styles.brandArea} aria-label="Chirayu Power Home">
           <div className={styles.logoWrapper}>
             <img
               src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/assets/chirayu-icon1.png`}
@@ -56,7 +54,7 @@ export default function Navbar() {
               className={styles.logoImg}
             />
           </div>
-        </Link>
+        </a>
 
         {/* Navigation Links */}
         <div className={styles.navLinks}>
