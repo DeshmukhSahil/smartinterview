@@ -54,10 +54,16 @@ export const campaignSchema = z.object({
   locations: z.array(z.string().trim().min(1).max(100)).max(100),
   description: z.string().trim().min(1).max(5000),
   knowledge: z.string().trim().min(20).max(20000),
+  // AI screening criteria (ERP Job Campaigns → AI Screening & Interview tab).
+  must_haves: z.array(z.string().trim().min(1).max(500)).max(40).default([]),
+  disqualifiers: z.array(z.string().trim().min(1).max(500)).max(40).default([]),
+  nice_to_haves: z.array(z.string().trim().min(1).max(500)).max(40).default([]),
   min_years: z.number().min(0).max(60),
   max_years: z.number().min(0).max(60).nullable(),
   fields: z.array(fieldSchema).max(30),
-  questions: z.array(z.string().trim().min(1).max(1000)).min(1).max(30),
+  // Only AI-assisted interviews use questions (one-on-one rows get none, see
+  // createInterviewFromApplication); required for that mode in superRefine.
+  questions: z.array(z.string().trim().min(1).max(1000)).max(30),
   company_knowledge: z.string().max(20000),
   system_prompt: z.string().max(20000),
   ai_model: z.string().min(1).max(100),
@@ -77,6 +83,7 @@ export const campaignSchema = z.object({
   const fail = (message: string) => ctx.addIssue({ code: "custom", message });
   if (c.active && !c.locations.length) fail("Enter approved locations before publishing");
   if (c.max_years !== null && c.max_years < c.min_years) fail("Maximum experience must be at least minimum experience");
+  if (c.interview_mode === "ai_assisted" && !c.questions.length) fail("An AI-assisted interview needs at least one question");
   if (new Set(c.fields.map(f => f.id)).size !== c.fields.length) fail("Question IDs must be unique");
   if (c.role === "Finance Manager" && c.locations.some(l => l !== "Khamgaon")) fail("Finance location must be Khamgaon");
   if (c.role === "Tendering Manager" && c.locations.some(l => !["Khamgaon", "Nagpur"].includes(l))) fail("Tendering locations must be Khamgaon or Nagpur");

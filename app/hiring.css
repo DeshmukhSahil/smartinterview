@@ -173,6 +173,7 @@
 .hiring-fields {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  align-items: start;
   gap: 22px;
 }
 
@@ -186,6 +187,17 @@
   gap: 7px;
   position: relative;
   color: #243e5a;
+}
+
+/* Fields whose content doesn't fit a half-width column -- a checkbox/radio
+   GROUP (can grow to however many options HR configures), a long-answer
+   textarea, the resume dropzone, and the consent statement. Spanning both
+   columns keeps these from being squeezed next to an unrelated short field
+   and, since align-items:start above stops the grid from stretching cells
+   to match their row's tallest neighbor, keeps every OTHER field a normal
+   compact height instead of inheriting a tall field-group's dead space. */
+.hiring-field-full {
+  grid-column: 1 / -1;
 }
 
 /* :not([type="checkbox"]) -- this rule is meant for text-style fields;
@@ -309,6 +321,16 @@
   margin-top: 2px;
 }
 
+/* Options row for a field-group (radios/checkboxes) -- wraps across the
+   full-width field-group instead of stacking as one narrow vertical list,
+   so it stays tidy whether HR configures 2 options or 6. */
+.field-group-options {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 28px;
+  row-gap: 10px;
+}
+
 /* "Work location preference" radios (and, historically, the relocate-anywhere
    checkbox this replaced). */
 .relocate-checkbox-row {
@@ -358,8 +380,13 @@
   color: #3a4a5c;
 }
 
-.hiring-consent {
+/* .hiring-fields label (two classes lower specificity, but sets
+   flex-direction:column) would otherwise win over plain .hiring-consent and
+   stack the checkbox above its text instead of beside it -- qualify with
+   .hiring-fields to outrank it. */
+.hiring-fields .hiring-consent {
   display: flex;
+  flex-direction: row;
   align-items: flex-start;
   gap: 10px;
   font-size: 12px;

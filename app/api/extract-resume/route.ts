@@ -187,16 +187,26 @@ export async function POST(request: Request) {
 
     // Handle Local Text Extraction (No LLM Model)
     if (selectedModel.toLowerCase() === "local" || selectedModel.toLowerCase() === "none") {
+      // OCR often splits emails ("name@ gmail.com", "name @gmail .com"): close the gaps first.
+      const emailText = textContent.replace(/\s*@\s*/g, "@").replace(/(@[\w-]+)\s*\.\s*([a-z]{2,})/gi, "$1.$2");
       const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-      const emails = textContent.match(emailRegex);
+      const emails = emailText.match(emailRegex);
       const candidateEmail = emails ? emails[0] : "";
       // First phone-like run of 10+ digits (optionally +country code, spaces, dashes, brackets).
       const phoneMatch = textContent.match(/(\+?\d[\d\s()-]{8,}\d)/);
       const candidatePhone = phoneMatch ? phoneMatch[1].replace(/\s+/g, " ").trim() : "";
 
       const lines = textContent.split("\n").map((l) => l.trim()).filter(Boolean);
-      let candidateName = "";
-      for (const line of lines.slice(0, 5)) {
+      // Resumes with labelled fields ("Name: …") — common in scanned / form-style CVs.
+      const labelled = (label: RegExp) => {
+        for (const line of lines) {
+          const m = line.match(label);
+          if (m?.[1]) return m[1].replace(/[^\p{L}\p{N} .'-]/gu, " ").replace(/\s+/g, " ").trim();
+        }
+        return "";
+      };
+      let candidateName = labelled(/\b(?:full\s+)?name\s*[:\-–]\s*(.+)$/i);
+      for (const line of candidateName ? [] : lines.slice(0, 5)) {
         const words = line.split(/\s+/).filter(Boolean);
         if (
           words.length >= 2 &&

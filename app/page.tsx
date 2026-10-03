@@ -1360,21 +1360,21 @@ function HiringApplication() {
                   {c.responsibilities.length > 0 && (
                     <>
                       <h3>Key Responsibilities</h3>
-                      <ul>{c.responsibilities.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                      <ul>{c.responsibilities.map((item, i) => <li key={i} style={{ whiteSpace: "pre-line" }}>{item}</li>)}</ul>
                     </>
                   )}
 
                   {c.qualifications.length > 0 && (
                     <>
                       <h3>Qualifications</h3>
-                      <ul>{c.qualifications.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                      <ul>{c.qualifications.map((item, i) => <li key={i} style={{ whiteSpace: "pre-line" }}>{item}</li>)}</ul>
                     </>
                   )}
 
                   {c.benefits.length > 0 && (
                     <>
                       <h3>Benefits</h3>
-                      <ul>{c.benefits.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                      <ul>{c.benefits.map((item, i) => <li key={i} style={{ whiteSpace: "pre-line" }}>{item}</li>)}</ul>
                     </>
                   )}
                 </div>
@@ -1453,7 +1453,7 @@ function HiringApplication() {
                       // layout every other field type uses below.
                       if (f.id === "consent") {
                         return (
-                          <label key={f.id} className={`hiring-consent ${isFieldTouched && fieldError ? "is-invalid" : ""}`}>
+                          <label key={f.id} className={`hiring-consent hiring-field-full ${isFieldTouched && fieldError ? "is-invalid" : ""}`}>
                             <input
                               type="checkbox"
                               required={f.required}
@@ -1478,7 +1478,7 @@ function HiringApplication() {
                       // through `answers`/`candidate` -- see fileInput ref).
                       if (f.id === "resume") {
                         return (
-                          <label key={f.id} className="hiring-upload">
+                          <label key={f.id} className="hiring-upload hiring-field-full">
                             <strong>{f.label}{f.required ? " *" : ""}</strong>
                             <span>PDF or TXT · up to 4 MB</span>
                             <input
@@ -1528,34 +1528,36 @@ function HiringApplication() {
                       // agreement to any specific Chirayu location.
                       if (f.id === "work_location_preference") {
                         return (
-                          <div key={f.id} className="field-group">
+                          <div key={f.id} className="field-group hiring-field-full">
                             {f.label}{f.required ? " *" : ""}
-                            <label className="relocate-checkbox-row">
-                              <input
-                                type="radio"
-                                name="work_location_preference"
-                                checked={candidate.work_location_preference === "near_current"}
-                                onChange={() => {
-                                  setCandidate({ ...candidate, work_location_preference: "near_current" });
-                                  markTouched("work_location_preference");
-                                  invalidate();
-                                }}
-                              />
-                              I prefer to work near my current location
-                            </label>
-                            <label className="relocate-checkbox-row">
-                              <input
-                                type="radio"
-                                name="work_location_preference"
-                                checked={candidate.work_location_preference === "open_to_relocate"}
-                                onChange={() => {
-                                  setCandidate({ ...candidate, work_location_preference: "open_to_relocate" });
-                                  markTouched("work_location_preference");
-                                  invalidate();
-                                }}
-                              />
-                              I&apos;m open to relocating for this role
-                            </label>
+                            <div className="field-group-options">
+                              <label className="relocate-checkbox-row">
+                                <input
+                                  type="radio"
+                                  name="work_location_preference"
+                                  checked={candidate.work_location_preference === "near_current"}
+                                  onChange={() => {
+                                    setCandidate({ ...candidate, work_location_preference: "near_current" });
+                                    markTouched("work_location_preference");
+                                    invalidate();
+                                  }}
+                                />
+                                I prefer to work near my current location
+                              </label>
+                              <label className="relocate-checkbox-row">
+                                <input
+                                  type="radio"
+                                  name="work_location_preference"
+                                  checked={candidate.work_location_preference === "open_to_relocate"}
+                                  onChange={() => {
+                                    setCandidate({ ...candidate, work_location_preference: "open_to_relocate" });
+                                    markTouched("work_location_preference");
+                                    invalidate();
+                                  }}
+                                />
+                                I&apos;m open to relocating for this role
+                              </label>
+                            </div>
                             {isFieldTouched && fieldError && (
                               <span className="field-error-msg">{fieldError}</span>
                             )}
@@ -1570,30 +1572,32 @@ function HiringApplication() {
                       if (f.id === "comfortable_locations") {
                         if (c.locations.length <= 1) return null;
                         return (
-                          <div key={f.id} className="field-group">
+                          <div key={f.id} className="field-group hiring-field-full">
                             {f.label}{f.required ? " *" : ""}
-                            {c.locations.map(loc => {
-                              const checked = candidate.comfortable_locations.includes(loc);
-                              return (
-                                <label key={loc} className="relocate-checkbox-row">
-                                  <input
-                                    type="checkbox"
-                                    checked={checked}
-                                    onChange={() => {
-                                      setCandidate({
-                                        ...candidate,
-                                        comfortable_locations: checked
-                                          ? candidate.comfortable_locations.filter(l => l !== loc)
-                                          : [...candidate.comfortable_locations, loc],
-                                      });
-                                      markTouched("comfortable_locations");
-                                      invalidate();
-                                    }}
-                                  />
-                                  {loc}, {stateForLocation(loc)}
-                                </label>
-                              );
-                            })}
+                            <div className="field-group-options">
+                              {c.locations.map(loc => {
+                                const checked = candidate.comfortable_locations.includes(loc);
+                                return (
+                                  <label key={loc} className="relocate-checkbox-row">
+                                    <input
+                                      type="checkbox"
+                                      checked={checked}
+                                      onChange={() => {
+                                        setCandidate({
+                                          ...candidate,
+                                          comfortable_locations: checked
+                                            ? candidate.comfortable_locations.filter(l => l !== loc)
+                                            : [...candidate.comfortable_locations, loc],
+                                        });
+                                        markTouched("comfortable_locations");
+                                        invalidate();
+                                      }}
+                                    />
+                                    {loc}, {stateForLocation(loc)}
+                                  </label>
+                                );
+                              })}
+                            </div>
                             {isFieldTouched && fieldError && (
                               <span className="field-error-msg">{fieldError}</span>
                             )}
@@ -1650,7 +1654,7 @@ function HiringApplication() {
                       const hint = f.id === "email" ? "Your interview access details will be sent here." : null;
 
                       return (
-                        <label key={f.id}>
+                        <label key={f.id} className={f.type === "textarea" ? "hiring-field-full" : undefined}>
                           {f.label}{f.required ? " *" : ""}
                           {f.type === "select" ? (
                             f.options.length > 3 ? (
