@@ -13,7 +13,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { label: "Career Home", href: "/" },
-  { label: "Contact Us", href: "https://chirayupower.com/contact-us" },
+  { label: "Contact Us", href: "/contact" },
 ];
 
 const isExternal = (href: string) => href.startsWith("http");

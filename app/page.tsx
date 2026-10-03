@@ -45,6 +45,7 @@ import "react-phone-number-input/style.css";
 import { isValidPhoneNumber } from "libphonenumber-js";
 import type { HiringDepartment } from "@/lib/hiring/hiringDepartments";
 import { stateForLocation } from "@/lib/hiring/locations";
+import { fuzzySearchStrings, fuzzySearchObjects, fuzzyTextMatches } from "@/lib/hiring/fuzzySearch";
 import { careerSlug, departmentPath, rolePath, jobPath, searchPath } from "@/lib/hiring/routes";
 import { useCareersRoute } from "@/lib/hiring/useCareersRoute";
 import Navbar from "@/components/Navbar";
@@ -491,9 +492,11 @@ function HiringApplication() {
     return pool;
   }, [campaigns, departments, referenceRoles]);
   function matchRoleSuggestions(query: string, limit = 8): string[] {
-    const q = query.trim().toLowerCase();
-    if (q.length < 2) return [];
-    return roleSuggestionPool.filter(t => t.toLowerCase().includes(q)).slice(0, limit);
+    // 2-char minimum: suppress the dropdown until there's enough typed to
+    // narrow it meaningfully (a 1-char fuzzy search against ~100+ role/
+    // department names would surface most of the pool).
+    if (query.trim().length < 2) return [];
+    return fuzzySearchStrings(roleSuggestionPool, query, limit);
   }
   const roleSuggestions = useMemo(
     () => matchRoleSuggestions(roleQueryDraft),
@@ -505,11 +508,9 @@ function HiringApplication() {
   // apply flow (correct campaign_id, tailored screening) instead of
   // landing in the generic bucket for something that's already listed.
   function matchOpenCampaigns(query: string, limit = 3): PublicCampaign[] {
-    const q = query.trim().toLowerCase();
-    if (q.length < 2) return [];
-    return campaigns.filter(camp =>
-      camp.job_code !== GENERAL_APPLICATION_JOB_CODE && camp.is_open && camp.role.toLowerCase().includes(q)
-    ).slice(0, limit);
+    if (query.trim().length < 2) return [];
+    const openCampaigns = campaigns.filter(camp => camp.job_code !== GENERAL_APPLICATION_JOB_CODE && camp.is_open);
+    return fuzzySearchObjects(openCampaigns, ["role"], query).slice(0, limit);
   }
 
   useEffect(() => {
@@ -607,14 +608,14 @@ function HiringApplication() {
   // candidate from a place Chirayu Power just doesn't have a listing for.
   const cityFilterHasRoles = !cityFilter || allCities.includes(cityFilter);
   const visibleCampaigns = useMemo(() => {
-    const q = roleQuery.trim().toLowerCase();
+    const q = roleQuery.trim();
     return campaigns
       .filter(role => {
         const matchesQuery =
           !q ||
-          role.role.toLowerCase().includes(q) ||
-          role.locations.some(l => l.toLowerCase().includes(q)) ||
-          (departments.find(d => d.id === role.department_id)?.name || "").toLowerCase().includes(q);
+          fuzzyTextMatches(role.role, q) ||
+          role.locations.some(l => fuzzyTextMatches(l, q)) ||
+          fuzzyTextMatches(departments.find(d => d.id === role.department_id)?.name || "", q);
         const matchesCity = !cityFilterHasRoles || !cityFilter || role.locations.includes(cityFilter);
         return matchesQuery && matchesCity && (!route?.role || careerSlug(role.role) === route.role);
       })
@@ -624,15 +625,15 @@ function HiringApplication() {
   }, [campaigns, departments, roleQuery, cityFilter, cityFilterHasRoles, route?.role]);
   // Explicit campaign assignments and database metadata determine every group.
   const groupedByDepartment = useMemo(() => {
-    const q = roleQuery.trim().toLowerCase();
+    const q = roleQuery.trim();
     return departments.map(department => {
       const openRoles = visibleCampaigns.filter(role => role.department_id === department.id);
       const directoryRoles = cityFilter && cityFilterHasRoles ? [] : department.reference_roles.filter(r =>
         (!route?.role || careerSlug(r.title) === route.role) &&
-        (!q || r.title.toLowerCase().includes(q) || department.name.toLowerCase().includes(q)));
+        (!q || fuzzyTextMatches(r.title, q) || fuzzyTextMatches(department.name, q)));
       return { department, openRoles, directoryRoles };
     }).filter(g => g.openRoles.length || g.directoryRoles.length ||
-      (!route?.role && !cityFilter && (!q || g.department.name.toLowerCase().includes(q))));
+      (!route?.role && !cityFilter && (!q || fuzzyTextMatches(g.department.name, q))));
   }, [departments, visibleCampaigns, roleQuery, cityFilter, cityFilterHasRoles, route?.role]);
   // No active search and no department picked yet -- the top-level
   // department picker grid, not the role listing, is what's shown.

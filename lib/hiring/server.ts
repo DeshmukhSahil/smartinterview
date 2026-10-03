@@ -67,14 +67,14 @@ export function failure(error: unknown, request?: Request) {
   // Do not return infrastructure errors or provider responses to public users.
   return Response.json({ error: status !== 400 ? message : "Unable to complete this request. Check your details or try again shortly." }, { status, headers: request ? cors(request) : {} });
 }
-export async function sendEmail(params: { to: string[]; subject: string; text: string; idempotencyKey?: string }) {
+export async function sendEmail(params: { to: string[]; subject: string; text: string; replyTo?: string; idempotencyKey?: string }) {
   const apiKey = env("RESEND_API_KEY");
   const from = env("HIRING_EMAIL_FROM");
   const headers: Record<string, string> = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
   if (params.idempotencyKey) headers["Idempotency-Key"] = params.idempotencyKey;
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST", signal: AbortSignal.timeout(15000), headers,
-    body: JSON.stringify({ from, to: params.to, subject: params.subject, text: params.text }),
+    body: JSON.stringify({ from, to: params.to, subject: params.subject, text: params.text, reply_to: params.replyTo }),
   });
   if (!response.ok) throw new Error("Email provider did not confirm delivery");
 }
